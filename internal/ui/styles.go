@@ -21,16 +21,22 @@ var (
 // Declare as package-level vars so they're accessible everywhere.
 var (
 	// Panels
-	panelStyle           lipgloss.Style
-	activePanelStyle     lipgloss.Style
-	panelTitleStyle      lipgloss.Style
+	panelStyle            lipgloss.Style
+	activePanelStyle      lipgloss.Style
+	panelTitleStyle       lipgloss.Style
 	panelTitleActiveStyle lipgloss.Style
 
-	// List items
+	// List items (focused panel)
 	itemStyle             lipgloss.Style
 	selectedItemStyle     lipgloss.Style
 	itemDescStyle         lipgloss.Style
 	selectedItemDescStyle lipgloss.Style
+
+	// List items (dimmed for unfocused panels)
+	dimItemStyle             lipgloss.Style
+	dimSelectedItemStyle     lipgloss.Style
+	dimItemDescStyle         lipgloss.Style
+	dimSelectedItemDescStyle lipgloss.Style
 
 	// Conversation
 	userBubbleStyle      lipgloss.Style
@@ -41,11 +47,20 @@ var (
 	timestampStyle       lipgloss.Style
 	tokenStyle           lipgloss.Style
 
+	// Message avatars
+	avatarUserStyle      lipgloss.Style
+	avatarAssistantStyle lipgloss.Style
+
 	// Status bar
 	statusBarStyle lipgloss.Style
 	helpKeyStyle   lipgloss.Style
 	helpDescStyle  lipgloss.Style
 	logoStyle      lipgloss.Style
+
+	// Header bar
+	headerStyle           lipgloss.Style
+	headerLineStyle       lipgloss.Style
+	headerBreadcrumbStyle lipgloss.Style
 
 	// Tool calls
 	toolHeaderStyle lipgloss.Style
@@ -84,6 +99,11 @@ var (
 	helpOverlayTitleStyle lipgloss.Style
 	helpSectionStyle      lipgloss.Style
 
+	// Scroll indicator
+	scrollTrackStyle lipgloss.Style
+	scrollThumbStyle lipgloss.Style
+
 	// Empty state
-	emptyStyle lipgloss.Style
+	emptyStyle     lipgloss.Style
+	emptyLogoStyle lipgloss.Style
 )

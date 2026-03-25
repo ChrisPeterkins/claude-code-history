@@ -121,24 +121,15 @@ func (m Model) renderHelp() string {
 		items = append(items, helpKeyStyle.Render(p.key)+" "+helpDescStyle.Render(p.desc))
 	}
 
-	logo := logoStyle.Render("◈ Claude History")
-
-	// Breadcrumb
-	breadcrumb := m.renderBreadcrumb()
-
-	left := logo
-	if breadcrumb != "" && m.width >= 80 {
-		left += statusBarStyle.Render("  │  ") + breadcrumb
-	}
-
-	// Status flash message
+	// Status flash message on the left
+	left := ""
 	if m.statusMessage != "" {
-		left += statusBarStyle.Render("  ") + helpKeyStyle.Render(m.statusMessage)
+		left = helpKeyStyle.Render(" " + m.statusMessage)
 	}
 
 	bar := lipgloss.JoinHorizontal(lipgloss.Center,
 		left,
-		statusBarStyle.Render("  │  "),
+		statusBarStyle.Render("  "),
 		strings.Join(items, statusBarStyle.Render("  ·  ")),
 	)
 

@@ -11,7 +11,11 @@ import (
 
 func (m Model) renderConversation() (string, []int) {
 	if len(m.messages) == 0 {
-		return emptyStyle.Render("\n\n  No messages to display"), nil
+		empty := "\n\n\n" +
+			emptyLogoStyle.Render("◈") + "\n\n" +
+			emptyStyle.Render("Select a session\nto view the conversation") + "\n\n" +
+			timestampStyle.Render("↑/↓ navigate · enter to select")
+		return empty, nil
 	}
 
 	w := m.conversationWidth() - conversationPadding
@@ -55,21 +59,28 @@ func (m Model) renderConversation() (string, []int) {
 
 func (m Model) renderUserMessage(msg data.Message, w int) string {
 	ts := timestampStyle.Render(msg.Timestamp.Format("15:04:05"))
-	label := userLabelStyle.Render("  You") + " " + ts
+	avatar := avatarUserStyle.Render("●")
+	label := " " + avatar + " " + userLabelStyle.Render("You") + " " + ts
 
 	text := msg.RawText
 	if text == "" {
-		// Check if this is a tool result only message (no text)
 		return ""
 	}
 
-	body := userBubbleStyle.Width(w).Render(text)
+	// Render through glamour for inline code, bold, etc.
+	mdRendered, err := m.renderer.Render(text)
+	if err != nil || strings.TrimSpace(mdRendered) == "" {
+		mdRendered = text
+	}
+
+	body := userBubbleStyle.Width(w).Render(mdRendered)
 	return label + "\n" + body
 }
 
 func (m Model) renderAssistantMessage(msg data.Message, w int) string {
 	ts := timestampStyle.Render(msg.Timestamp.Format("15:04:05"))
-	label := assistantLabelStyle.Render("  Claude") + " " + ts
+	avatar := avatarAssistantStyle.Render("◆")
+	label := " " + avatar + " " + assistantLabelStyle.Render("Claude") + " " + ts
 
 	var sections []string
 	sections = append(sections, label)

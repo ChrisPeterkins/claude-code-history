@@ -26,7 +26,7 @@ func (m Model) renderProjectsPanel() string {
 
 	title := panelTitleStyle.Render("Projects")
 	if m.focus == panelProjects {
-		title = panelTitleActiveStyle.Render("Projects")
+		title = panelTitleActiveStyle.Render(" Projects ")
 	}
 
 	var items []string
@@ -44,10 +44,19 @@ func (m Model) renderProjectsPanel() string {
 			suffix += " ○"
 		}
 		name := truncateStr(p.Name, w-8)
+		focused := m.focus == panelProjects
 		if i == m.projectCursor {
-			items = append(items, selectedItemStyle.Width(w-4).Render("▸ "+name+suffix))
+			style := selectedItemStyle
+			if !focused {
+				style = dimSelectedItemStyle
+			}
+			items = append(items, style.Width(w-4).Render(name+suffix))
 		} else {
-			items = append(items, itemStyle.Width(w-4).Render("  "+name+suffix))
+			style := itemStyle
+			if !focused {
+				style = dimItemStyle
+			}
+			items = append(items, style.Width(w-4).Render(name+suffix))
 		}
 	}
 
@@ -62,14 +71,14 @@ func (m Model) renderSessionsPanel() string {
 
 	title := panelTitleStyle.Render("Sessions")
 	if m.focus == panelSessions {
-		title = panelTitleActiveStyle.Render("Sessions")
+		title = panelTitleActiveStyle.Render(" Sessions ")
 	}
 
 	var items []string
 	items = append(items, title)
 
 	if len(m.sessions) == 0 {
-		items = append(items, emptyStyle.Width(w-4).Render("No sessions"))
+		items = append(items, "\n"+emptyLogoStyle.Width(w-4).Render("◈")+"\n"+emptyStyle.Width(w-4).Render("No sessions"))
 	} else {
 		groups := GroupSessionsByDate(m.sessions)
 		// Flatten groups into displayable items with cursor tracking
@@ -109,13 +118,22 @@ func (m Model) renderSessionsPanel() string {
 			}
 			stats := sessionStatsLine(s)
 
+			focused := m.focus == panelSessions
 			if item.origIdx == m.sessionCursor {
-				line1 := selectedItemStyle.Width(w - 4).Render("▸ " + date + "  " + stats)
-				line2 := selectedItemDescStyle.Width(w - 4).Render("  " + preview)
+				s1, s2 := selectedItemStyle, selectedItemDescStyle
+				if !focused {
+					s1, s2 = dimSelectedItemStyle, dimSelectedItemDescStyle
+				}
+				line1 := s1.Width(w - 4).Render(date + "  " + stats)
+				line2 := s2.Width(w - 4).Render(preview)
 				items = append(items, line1, line2)
 			} else {
-				line1 := itemStyle.Width(w - 4).Render("  " + date + "  " + stats)
-				line2 := itemDescStyle.Width(w - 4).Render("  " + preview)
+				s1, s2 := itemStyle, itemDescStyle
+				if !focused {
+					s1, s2 = dimItemStyle, dimItemDescStyle
+				}
+				line1 := s1.Width(w - 4).Render(date + "  " + stats)
+				line2 := s2.Width(w - 4).Render(preview)
 				items = append(items, line1, line2)
 			}
 		}
@@ -132,7 +150,7 @@ func (m Model) renderConversationPanel() string {
 
 	title := panelTitleStyle.Render("Conversation")
 	if m.focus == panelConversation {
-		title = panelTitleActiveStyle.Render("Conversation")
+		title = panelTitleActiveStyle.Render(" Conversation ")
 	}
 
 	scrollInfo := ""
@@ -143,17 +161,21 @@ func (m Model) renderConversationPanel() string {
 
 	header := lipgloss.JoinHorizontal(lipgloss.Center, title, scrollInfo)
 
-	m.viewport.Width = w - 4
+	m.viewport.Width = w - 6 // leave room for scroll indicator
 	m.viewport.Height = h - 3
 
 	var body string
 	if m.loading {
-		body = "\n\n" + emptyStyle.Width(w-4).Render(m.spinner.View()+" Loading session...")
+		body = "\n\n" + emptyStyle.Width(w-6).Render(m.spinner.View()+" Loading session...")
 	} else {
 		body = m.viewport.View()
 	}
 
-	content := lipgloss.JoinVertical(lipgloss.Left, header, body)
+	// Add scroll indicator
+	scrollbar := m.renderScrollbar(h - 3)
+	bodyWithScroll := lipgloss.JoinHorizontal(lipgloss.Top, body, " ", scrollbar)
+
+	content := lipgloss.JoinVertical(lipgloss.Left, header, bodyWithScroll)
 
 	return m.panelStyleFor(panelConversation).Width(w).Height(h).Render(content)
 }
@@ -212,7 +234,7 @@ func (m Model) conversationWidth() int {
 }
 
 func (m Model) contentHeight() int {
-	h := m.height - 2
+	h := m.height - 3 // header + help bar + padding
 	if h < 5 {
 		return 5
 	}
@@ -269,4 +291,48 @@ func (m Model) panelStyleFor(panel int) lipgloss.Style {
 		return activePanelStyle
 	}
 	return panelStyle
+}
+
+// renderScrollbar renders a vertical scroll indicator for the conversation viewport.
+func (m Model) renderScrollbar(height int) string {
+	if height <= 0 || m.viewport.TotalLineCount() <= m.viewport.Height {
+		// No scrollbar needed — content fits
+		track := strings.Repeat(" \n", height)
+		return track
+	}
+
+	// Calculate thumb position
+	pct := m.viewport.ScrollPercent()
+	thumbPos := int(pct * float64(height-1))
+
+	var lines []string
+	for i := 0; i < height; i++ {
+		if i == thumbPos {
+			lines = append(lines, scrollThumbStyle.Render("█"))
+		} else {
+			lines = append(lines, scrollTrackStyle.Render("│"))
+		}
+	}
+	return strings.Join(lines, "\n")
+}
+
+// renderHeader renders the top header bar with logo and breadcrumb.
+func (m Model) renderHeader() string {
+	logo := headerStyle.Render(" ◈ Claude History")
+	breadcrumb := m.renderBreadcrumb()
+
+	if breadcrumb != "" {
+		breadcrumb = headerBreadcrumbStyle.Render(breadcrumb) + " "
+	}
+
+	// Fill the middle with ─
+	logoLen := lipgloss.Width(logo)
+	bcLen := lipgloss.Width(breadcrumb)
+	fillLen := m.width - logoLen - bcLen - 2
+	if fillLen < 3 {
+		fillLen = 3
+	}
+	fill := headerLineStyle.Render(" " + strings.Repeat("─", fillLen) + " ")
+
+	return logo + fill + breadcrumb
 }

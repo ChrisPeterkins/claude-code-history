@@ -291,9 +291,10 @@ func (m Model) View() string {
 		main = lipgloss.JoinHorizontal(lipgloss.Top, projectsPanel, sessionsPanel, convoPanel)
 	}
 
+	header := m.renderHeader()
 	help := m.renderHelp()
 
-	return lipgloss.JoinVertical(lipgloss.Left, main, help)
+	return lipgloss.JoinVertical(lipgloss.Left, header, main, help)
 }
 
 // statusClearMsg clears the flash message.
