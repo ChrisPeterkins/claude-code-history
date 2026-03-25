@@ -12,22 +12,30 @@ import (
 	"github.com/alecthomas/chroma/v2/formatters"
 	"github.com/alecthomas/chroma/v2/lexers"
 	"github.com/alecthomas/chroma/v2/styles"
+	"github.com/charmbracelet/lipgloss"
 
 	"github.com/chrispeterkins/claude-history/internal/data"
 )
 
-func (m Model) renderConversation() (string, []int) {
+type renderResult struct {
+	content          string
+	userLines        []int
+	collapsibleLines map[string]int
+}
+
+func (m Model) renderConversation() renderResult {
 	if len(m.messages) == 0 {
 		empty := "\n\n\n" +
 			emptyLogoStyle.Render("◈") + "\n\n" +
 			emptyStyle.Render("Select a session\nto view the conversation") + "\n\n" +
 			timestampStyle.Render("↑/↓ navigate · enter to select")
-		return empty, nil
+		return renderResult{content: empty}
 	}
 
 	w := m.conversationWidth() - conversationPadding
 	var parts []string
 	var userLines []int
+	collapsibleLines := make(map[string]int)
 	lineCount := 0
 
 	// Compute and render stats header
@@ -44,7 +52,6 @@ func (m Model) renderConversation() (string, []int) {
 		switch msg.Type {
 		case "user":
 			if msg.RawText != "" {
-				// Add turn divider before user messages (except the first)
 				if hasRendered {
 					divider := turnDividerStyle.Render(strings.Repeat("─", w))
 					parts = append(parts, divider)
@@ -54,6 +61,16 @@ func (m Model) renderConversation() (string, []int) {
 				rendered = m.renderUserMessage(msg, w)
 			}
 		case "assistant":
+			// Track collapsible section positions before rendering
+			blockLine := lineCount + 2 // account for the label line
+			for _, block := range msg.ContentBlocks {
+				switch block.Type {
+				case "thinking":
+					collapsibleLines["thinking:"+msg.UUID] = blockLine
+				case "tool_use":
+					collapsibleLines["tool:"+block.ToolID] = blockLine
+				}
+			}
 			rendered = m.renderAssistantMessage(msg, w)
 		case "system":
 			if msg.Subtype == "turn_duration" && msg.DurationMs > 0 {
@@ -68,7 +85,11 @@ func (m Model) renderConversation() (string, []int) {
 		}
 	}
 
-	return strings.Join(parts, "\n"), userLines
+	return renderResult{
+		content:          strings.Join(parts, "\n"),
+		userLines:        userLines,
+		collapsibleLines: collapsibleLines,
+	}
 }
 
 func (m Model) renderUserMessage(msg data.Message, w int) string {
@@ -134,15 +155,20 @@ func (m Model) renderThinkingBlock(block data.ContentBlock, msgUUID string, w in
 	highlighted := key == m.highlightKey
 
 	gutter := thinkingGutterStyle
+	headerStyle := thinkingHeaderStyle
 	if highlighted {
-		gutter = toolGutterExpandedStyle // brighter border when targeted
+		gutter = toolGutterExpandedStyle
+		headerStyle = lipgloss.NewStyle().
+			Foreground(colorBg).
+			Background(colorFgDim).
+			Bold(true)
 	}
 
 	if collapsed {
-		return gutter.Render(thinkingHeaderStyle.Render("▸ Thinking..."))
+		return gutter.Render(headerStyle.Render("▸ Thinking..."))
 	}
 
-	header := thinkingHeaderStyle.Render("▾ Thinking")
+	header := headerStyle.Render("▾ Thinking")
 	text := block.Thinking
 	if text == "" {
 		text = "(redacted)"
@@ -166,13 +192,21 @@ func (m Model) renderToolCall(block data.ContentBlock, msg data.Message, w int) 
 		arrow = "▾"
 	}
 
-	header := toolHeaderStyle.Render(fmt.Sprintf("%s %s", arrow, toolBadgeStyle.Render(block.ToolName))) +
-		" " + toolHeaderStyle.Render(summary)
+	hdrStyle := toolHeaderStyle
+	if highlighted {
+		hdrStyle = lipgloss.NewStyle().
+			Foreground(colorBg).
+			Background(colorWarm).
+			Bold(true)
+	}
+
+	header := hdrStyle.Render(fmt.Sprintf("%s %s", arrow, toolBadgeStyle.Render(block.ToolName))) +
+		" " + hdrStyle.Render(summary)
 
 	if collapsed {
 		gutter := toolGutterCollapsedStyle
 		if highlighted {
-			gutter = toolGutterExpandedStyle // brighter when targeted
+			gutter = toolGutterExpandedStyle
 		}
 		return gutter.Render(header)
 	}

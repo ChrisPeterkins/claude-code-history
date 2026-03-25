@@ -43,8 +43,9 @@ type Model struct {
 	renderer *glamour.TermRenderer
 
 	// Collapsible sections: key -> collapsed (true = collapsed)
-	collapsed    map[string]bool
-	highlightKey string // collapsible key currently targeted (for visual indicator)
+	collapsed        map[string]bool
+	highlightKey     string         // collapsible key currently targeted (for visual indicator)
+	collapsibleLines map[string]int // key → line number (populated during render)
 
 	// Help overlay
 	showHelp bool
@@ -139,9 +140,10 @@ func (m *Model) rebuildRenderer() {
 
 // updateConversationContent re-renders the conversation and updates the viewport and line tracking.
 func (m *Model) updateConversationContent() {
-	content, lines := m.renderConversation()
-	m.viewport.SetContent(content)
-	m.userMessageLines = lines
+	result := m.renderConversation()
+	m.viewport.SetContent(result.content)
+	m.userMessageLines = result.userLines
+	m.collapsibleLines = result.collapsibleLines
 }
 
 func (m Model) Init() tea.Cmd {

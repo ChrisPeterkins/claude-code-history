@@ -363,84 +363,37 @@ func (m *Model) jumpToNextUserMessage(dir int) {
 	}
 }
 
-// toggleCollapsibleAtCursor toggles the collapsible section nearest to the viewport cursor.
-// Uses a line-count heuristic to approximate which section is visible. Falls back to
-// toggling all sections if no specific match is found.
+// toggleCollapsibleAtCursor toggles the collapsible section nearest to the viewport position.
 func (m *Model) toggleCollapsibleAtCursor() {
-	currentLine := m.viewport.YOffset + m.viewport.Height/3
-
-	lineCount := 0
-	for _, msg := range m.messages {
-		if msg.Type != "assistant" {
-			lineCount += 3
-			continue
-		}
-
-		for _, block := range msg.ContentBlocks {
-			var key string
-			switch block.Type {
-			case "thinking":
-				key = "thinking:" + msg.UUID
-			case "tool_use":
-				key = "tool:" + block.ToolID
-			default:
-				lineCount += 2
-				continue
-			}
-
-			if key != "" && lineCount >= currentLine-5 && lineCount <= currentLine+5 {
-				m.collapsed[key] = !m.isCollapsed(key)
-				return
-			}
-			lineCount += 3
-		}
-		lineCount += 2
-	}
-
-	// Fallback: toggle all
-	allExpanded := true
-	for _, v := range m.collapsed {
-		if v {
-			allExpanded = false
-			break
-		}
-	}
-	if allExpanded || len(m.collapsed) == 0 {
-		m.collapseAll()
-	} else {
-		m.expandAll()
+	key := m.nearestCollapsibleKey()
+	if key != "" {
+		m.collapsed[key] = !m.isCollapsed(key)
 	}
 }
 
 // nearestCollapsibleKey returns the key of the collapsible section closest to the viewport center.
+// Uses exact line positions tracked during rendering.
 func (m *Model) nearestCollapsibleKey() string {
-	currentLine := m.viewport.YOffset + m.viewport.Height/3
-
-	lineCount := 0
-	for _, msg := range m.messages {
-		if msg.Type != "assistant" {
-			lineCount += 3
-			continue
-		}
-		for _, block := range msg.ContentBlocks {
-			var key string
-			switch block.Type {
-			case "thinking":
-				key = "thinking:" + msg.UUID
-			case "tool_use":
-				key = "tool:" + block.ToolID
-			default:
-				lineCount += 2
-				continue
-			}
-			if key != "" && lineCount >= currentLine-5 && lineCount <= currentLine+5 {
-				return key
-			}
-			lineCount += 3
-		}
-		lineCount += 2
+	if len(m.collapsibleLines) == 0 {
+		return ""
 	}
-	return ""
+
+	target := m.viewport.YOffset + m.viewport.Height/3
+	bestKey := ""
+	bestDist := int(^uint(0) >> 1) // max int
+
+	for key, line := range m.collapsibleLines {
+		dist := target - line
+		if dist < 0 {
+			dist = -dist
+		}
+		if dist < bestDist {
+			bestDist = dist
+			bestKey = key
+		}
+	}
+
+	return bestKey
 }
 
 // expandAll expands all collapsible sections in the current conversation.
