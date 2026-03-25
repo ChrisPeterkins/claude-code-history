@@ -140,13 +140,22 @@ func (m *Model) rebuildRenderer() {
 
 // updateConversationContent re-renders the conversation and updates the viewport and line tracking.
 func (m *Model) updateConversationContent() {
-	// Update highlight before rendering so the renderer can use it
-	m.highlightKey = m.nearestCollapsibleKey()
-
+	// First pass: render to get collapsible line positions
 	result := m.renderConversation()
-	m.viewport.SetContent(result.content)
 	m.userMessageLines = result.userLines
 	m.collapsibleLines = result.collapsibleLines
+
+	// Compute highlight from the positions we just got
+	newKey := m.nearestCollapsibleKey()
+	if newKey != m.highlightKey {
+		// Second pass: re-render with the highlight applied
+		m.highlightKey = newKey
+		result = m.renderConversation()
+		m.userMessageLines = result.userLines
+		m.collapsibleLines = result.collapsibleLines
+	}
+
+	m.viewport.SetContent(result.content)
 }
 
 func (m Model) Init() tea.Cmd {
