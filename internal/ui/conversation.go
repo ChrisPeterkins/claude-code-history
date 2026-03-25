@@ -9,14 +9,14 @@ import (
 	"github.com/chrispeterkins/claude-history/internal/data"
 )
 
-func (m *Model) renderConversation() string {
+func (m Model) renderConversation() (string, []int) {
 	if len(m.messages) == 0 {
-		return emptyStyle.Render("\n\n  No messages to display")
+		return emptyStyle.Render("\n\n  No messages to display"), nil
 	}
 
-	w := m.conversationWidth() - 8
+	w := m.conversationWidth() - conversationPadding
 	var parts []string
-	m.userMessageLines = nil
+	var userLines []int
 	lineCount := 0
 
 	hasRendered := false
@@ -32,7 +32,7 @@ func (m *Model) renderConversation() string {
 					parts = append(parts, divider)
 					lineCount += 2
 				}
-				m.userMessageLines = append(m.userMessageLines, lineCount)
+				userLines = append(userLines, lineCount)
 				rendered = m.renderUserMessage(msg, w)
 			}
 		case "assistant":
@@ -50,7 +50,7 @@ func (m *Model) renderConversation() string {
 		}
 	}
 
-	return strings.Join(parts, "\n")
+	return strings.Join(parts, "\n"), userLines
 }
 
 func (m Model) renderUserMessage(msg data.Message, w int) string {
@@ -116,8 +116,8 @@ func (m Model) renderThinkingBlock(block data.ContentBlock, msgUUID string, w in
 	if text == "" {
 		text = "(redacted)"
 	}
-	if len(text) > 2000 {
-		text = text[:2000] + "\n... (truncated)"
+	if len(text) > maxThinkingLen {
+		text = text[:maxThinkingLen] + "\n... (truncated)"
 	}
 	body := thinkingBodyStyle.Width(w - 6).Render(text)
 	return thinkingGutterStyle.Render(header + "\n" + body)
@@ -154,8 +154,8 @@ func (m Model) renderToolCall(block data.ContentBlock, msg data.Message, w int) 
 		if pair.Use.ToolID == block.ToolID {
 			result := pair.Result.Content
 			if result != "" {
-				if len(result) > 3000 {
-					result = result[:3000] + "\n... (truncated)"
+				if len(result) > maxToolResultLen {
+					result = result[:maxToolResultLen] + "\n... (truncated)"
 				}
 				if pair.Result.IsError {
 					bodyParts = append(bodyParts, toolErrorStyle.Width(w-6).Render("Error: "+result))
@@ -224,8 +224,8 @@ func toolCallSummary(block data.ContentBlock) string {
 	case "Bash":
 		if cmd, ok := block.Input["command"].(string); ok {
 			cmd = strings.ReplaceAll(cmd, "\n", " ")
-			if len(cmd) > 60 {
-				cmd = cmd[:57] + "..."
+			if len(cmd) > maxCommandSummaryLen {
+				cmd = cmd[:maxCommandSummaryLen-3] + "..."
 			}
 			return cmd
 		}

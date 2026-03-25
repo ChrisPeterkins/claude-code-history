@@ -162,14 +162,14 @@ func (m Model) renderConversationPanel() string {
 
 func (m Model) projectsWidth() int {
 	// Single panel mode: take full width
-	if (m.fullScreen || m.width < 60) && m.focus == panelProjects {
+	if (m.fullScreen || m.width < breakpointNarrow) && m.focus == panelProjects {
 		return m.width
 	}
-	if m.fullScreen || m.width < 60 {
+	if m.fullScreen || m.width < breakpointNarrow {
 		return 0
 	}
 	// Two-panel mode at medium width
-	if m.width < 100 {
+	if m.width < breakpointMedium {
 		if m.focus == panelProjects {
 			return max(20, m.width*2/5)
 		}
@@ -180,14 +180,14 @@ func (m Model) projectsWidth() int {
 
 func (m Model) sessionsWidth() int {
 	// Single panel mode: take full width
-	if (m.fullScreen || m.width < 60) && m.focus == panelSessions {
+	if (m.fullScreen || m.width < breakpointNarrow) && m.focus == panelSessions {
 		return m.width
 	}
-	if m.fullScreen || m.width < 60 {
+	if m.fullScreen || m.width < breakpointNarrow {
 		return 0
 	}
 	// Two-panel mode at medium width
-	if m.width < 100 {
+	if m.width < breakpointMedium {
 		if m.focus == panelProjects {
 			return m.width - m.projectsWidth()
 		}
@@ -198,10 +198,10 @@ func (m Model) sessionsWidth() int {
 
 func (m Model) conversationWidth() int {
 	// Single panel mode: take full width
-	if (m.fullScreen || m.width < 60) && m.focus == panelConversation {
+	if (m.fullScreen || m.width < breakpointNarrow) && m.focus == panelConversation {
 		return m.width
 	}
-	if m.fullScreen || m.width < 60 {
+	if m.fullScreen || m.width < breakpointNarrow {
 		return 0
 	}
 	w := m.width - m.projectsWidth() - m.sessionsWidth()

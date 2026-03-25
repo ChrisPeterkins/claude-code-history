@@ -7,6 +7,14 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+type markMode int
+
+const (
+	markNone markMode = iota
+	markSet
+	markJump
+)
+
 type markPosition struct {
 	sessionID string
 	yOffset   int
@@ -17,14 +25,14 @@ func (m Model) handleMarkKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	// Only accept a-z
 	if len(key) != 1 || key[0] < 'a' || key[0] > 'z' {
-		m.awaitingMark = ""
+		m.awaitingMark = markNone
 		m.statusMessage = ""
 		return m, nil
 	}
 
 	r := rune(key[0])
 
-	if m.awaitingMark == "set" {
+	if m.awaitingMark == markSet {
 		sessionID := ""
 		if m.sessionCursor < len(m.sessions) {
 			sessionID = m.sessions[m.sessionCursor].ID
@@ -34,19 +42,19 @@ func (m Model) handleMarkKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			yOffset:   m.viewport.YOffset,
 		}
 		m.statusMessage = fmt.Sprintf("Mark '%c' set", r)
-		m.awaitingMark = ""
+		m.awaitingMark = markNone
 		return m, clearStatusAfter(2 * time.Second)
 	}
 
-	if m.awaitingMark == "jump" {
+	if m.awaitingMark == markJump {
 		mark, ok := m.marks[r]
 		if !ok {
 			m.statusMessage = fmt.Sprintf("Mark '%c' not set", r)
-			m.awaitingMark = ""
+			m.awaitingMark = markNone
 			return m, clearStatusAfter(2 * time.Second)
 		}
 
-		m.awaitingMark = ""
+		m.awaitingMark = markNone
 		m.statusMessage = ""
 
 		// Same session — just jump
@@ -60,7 +68,7 @@ func (m Model) handleMarkKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		for i, s := range m.sessions {
 			if s.ID == mark.sessionID {
 				m.sessionCursor = i
-				m.pendingMarkOffset = &mark.yOffset
+				m.pendingMarkOffset = mark.yOffset
 				m.focus = panelConversation
 				return m, m.loadMessagesWithSpinner()
 			}
@@ -70,6 +78,6 @@ func (m Model) handleMarkKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, clearStatusAfter(2 * time.Second)
 	}
 
-	m.awaitingMark = ""
+	m.awaitingMark = markNone
 	return m, nil
 }

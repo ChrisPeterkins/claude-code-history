@@ -75,7 +75,7 @@ func (m Model) renderHelpOverlay() string {
 
 	content := strings.Join(lines, "\n")
 
-	overlayW := 44
+	overlayW := helpOverlayWidth
 	overlayH := len(lines) + 2
 	if overlayW > m.width-4 {
 		overlayW = m.width - 4
@@ -105,11 +105,11 @@ func (m Model) renderHelp() string {
 
 	// Show fewer keybindings on narrow terminals
 	pairs := allPairs
-	if m.width < 100 {
+	if m.width < breakpointMedium {
 		pairs = []struct{ key, desc string }{
 			{"f", "full"}, {"/", "search"}, {"?", "help"}, {"q", "quit"},
 		}
-	} else if m.width < 140 {
+	} else if m.width < breakpointWide {
 		pairs = []struct{ key, desc string }{
 			{"tab", "panel"}, {"f", "full"}, {"/", "search"},
 			{"space", "expand"}, {"?", "help"}, {"q", "quit"},

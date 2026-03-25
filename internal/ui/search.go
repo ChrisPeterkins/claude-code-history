@@ -55,7 +55,7 @@ func (m Model) handleSearchKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	// Trigger search on input change
 	query := m.searchInput.Value()
-	if query != "" && len(query) >= 2 {
+	if query != "" && len(query) >= minSearchQueryLen {
 		return m, tea.Batch(cmd, m.searchCmd(query))
 	}
 
@@ -89,7 +89,7 @@ func (m Model) searchCmd(query string) tea.Cmd {
 						Date:       session.StartedAt.Format("Jan 02 15:04"),
 					})
 				}
-				if len(results) >= 20 {
+				if len(results) >= maxSearchResults {
 					return searchResultsMsg{results: results}
 				}
 			}

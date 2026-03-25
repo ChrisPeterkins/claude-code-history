@@ -46,7 +46,7 @@ func LoadHistory() ([]Project, error) {
 	projectMap := make(map[string]*historyProject)
 
 	scanner := bufio.NewScanner(f)
-	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
+	scanner.Buffer(make([]byte, 0, scannerInitBuf), scannerMaxBuf)
 
 	for scanner.Scan() {
 		var entry HistoryEntry
@@ -111,9 +111,7 @@ func LoadHistory() ([]Project, error) {
 
 			firstEntry := entries[0]
 			preview := strings.TrimSpace(firstEntry.Display)
-			if len(preview) > 120 {
-				preview = preview[:117] + "..."
-			}
+			preview = truncate(preview, maxPreviewLen)
 
 			sessions = append(sessions, Session{
 				ID:             sessionID,

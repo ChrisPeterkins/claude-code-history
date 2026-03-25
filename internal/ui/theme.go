@@ -82,6 +82,10 @@ var themes = []Theme{
 	},
 }
 
+func init() {
+	applyTheme(themes[0]) // Default to Nord theme
+}
+
 // applyTheme updates all style variables to use the given theme's colors.
 func applyTheme(t Theme) {
 	colorPrimary = t.Primary

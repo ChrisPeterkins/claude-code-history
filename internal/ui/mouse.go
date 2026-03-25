@@ -24,10 +24,10 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) panelAtX(x int) int {
-	if m.fullScreen || m.width < 60 {
+	if m.fullScreen || m.width < breakpointNarrow {
 		return m.focus
 	}
-	if m.width < 100 {
+	if m.width < breakpointMedium {
 		// Two-panel mode
 		if m.focus == panelProjects {
 			if x < m.projectsWidth() {

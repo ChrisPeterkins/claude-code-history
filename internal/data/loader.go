@@ -13,7 +13,10 @@ import (
 var claudeDir string
 
 func init() {
-	home, _ := os.UserHomeDir()
+	home, err := os.UserHomeDir()
+	if err != nil {
+		home = os.Getenv("HOME")
+	}
 	claudeDir = filepath.Join(home, ".claude")
 }
 
@@ -42,7 +45,10 @@ func LoadProjects() ([]Project, error) {
 
 		// Count session files
 		sessionCount := 0
-		subEntries, _ := os.ReadDir(filepath.Join(projectsDir, dirName))
+		subEntries, err := os.ReadDir(filepath.Join(projectsDir, dirName))
+		if err != nil {
+			continue
+		}
 		for _, se := range subEntries {
 			if !se.IsDir() && strings.HasSuffix(se.Name(), ".jsonl") {
 				sessionCount++
@@ -59,7 +65,7 @@ func LoadProjects() ([]Project, error) {
 	}
 
 	// Merge in history-only projects (older conversations without session files)
-	historyProjects, _ := LoadHistory()
+	historyProjects, _ := LoadHistory() // error is non-fatal; history-only projects are optional
 	projects = append(projects, historyProjects...)
 
 	sort.Slice(projects, func(i, j int) bool {
@@ -84,7 +90,7 @@ func readProjectPath(projectDir string) string {
 			continue
 		}
 		scanner := bufio.NewScanner(f)
-		scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
+		scanner.Buffer(make([]byte, 0, scannerInitBuf), scannerMaxBuf)
 		for scanner.Scan() {
 			var raw struct {
 				Type string `json:"type"`
@@ -180,7 +186,7 @@ func peekSession(path string) (preview string, startedAt time.Time, stats sessio
 	defer f.Close()
 
 	scanner := bufio.NewScanner(f)
-	scanner.Buffer(make([]byte, 0, 1024*1024), 10*1024*1024)
+	scanner.Buffer(make([]byte, 0, scannerMaxBuf), scannerLargeBuf)
 
 	foundPreview := false
 
@@ -240,7 +246,7 @@ func peekSession(path string) (preview string, startedAt time.Time, stats sessio
 			if raw.Message != nil {
 				var contentStr string
 				if err := json.Unmarshal(raw.Message.Content, &contentStr); err == nil {
-					preview = truncate(contentStr, 120)
+					preview = truncate(contentStr, maxPreviewLen)
 				} else {
 					var blocks []struct {
 						Type string `json:"type"`
@@ -249,7 +255,7 @@ func peekSession(path string) (preview string, startedAt time.Time, stats sessio
 					if err := json.Unmarshal(raw.Message.Content, &blocks); err == nil {
 						for _, b := range blocks {
 							if b.Type == "text" && b.Text != "" {
-								preview = truncate(b.Text, 120)
+								preview = truncate(b.Text, maxPreviewLen)
 								break
 							}
 						}
@@ -276,7 +282,7 @@ func LoadMessages(session *Session) ([]Message, error) {
 
 	var messages []Message
 	scanner := bufio.NewScanner(f)
-	scanner.Buffer(make([]byte, 0, 1024*1024), 10*1024*1024)
+	scanner.Buffer(make([]byte, 0, scannerMaxBuf), scannerLargeBuf)
 
 	for scanner.Scan() {
 		msg := parseMessage(scanner.Bytes())

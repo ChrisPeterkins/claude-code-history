@@ -47,8 +47,8 @@ func exportMarkdown(messages []data.Message) string {
 				sb.WriteString("\n")
 				if pair.Result.Content != "" {
 					content := pair.Result.Content
-					if len(content) > 1000 {
-						content = content[:1000] + "\n... (truncated)"
+					if len(content) > maxExportContentLen {
+						content = content[:maxExportContentLen] + "\n... (truncated)"
 					}
 					sb.WriteString("```\n")
 					sb.WriteString(content)

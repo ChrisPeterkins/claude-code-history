@@ -46,7 +46,7 @@ func LoadSubagentMessages(agent *SubagentInfo) ([]Message, error) {
 
 	var messages []Message
 	scanner := bufio.NewScanner(f)
-	scanner.Buffer(make([]byte, 0, 1024*1024), 10*1024*1024)
+	scanner.Buffer(make([]byte, 0, scannerMaxBuf), scannerLargeBuf)
 
 	for scanner.Scan() {
 		msg := parseMessage(scanner.Bytes())

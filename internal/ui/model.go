@@ -66,8 +66,8 @@ type Model struct {
 
 	// Vim marks
 	marks            map[rune]markPosition
-	awaitingMark     string // "" | "set" | "jump"
-	pendingMarkOffset *int  // offset to restore after cross-session mark jump
+	awaitingMark     markMode
+	pendingMarkOffset int // offset to restore after cross-session mark jump, -1 = none
 
 	// Status flash message
 	statusMessage string
@@ -89,6 +89,7 @@ type SearchResult struct {
 	Date       string
 }
 
+// NewModel creates and returns an initialized Model with default settings.
 func NewModel() Model {
 	r, _ := glamour.NewTermRenderer(
 		glamour.WithAutoStyle(),
@@ -97,7 +98,7 @@ func NewModel() Model {
 
 	ti := textinput.New()
 	ti.Placeholder = "Search conversations..."
-	ti.CharLimit = 100
+	ti.CharLimit = searchCharLimit
 
 	s := spinner.New()
 	s.Spinner = spinner.Dot
@@ -109,7 +110,8 @@ func NewModel() Model {
 		searchInput:     ti,
 		spinner:         s,
 		scrollPositions: make(map[string]int),
-		marks:           make(map[rune]markPosition),
+		marks:             make(map[rune]markPosition),
+		pendingMarkOffset: -1,
 	}
 }
 
@@ -129,6 +131,13 @@ func (m *Model) rebuildRenderer() {
 		glamour.WithStylePath(style),
 		glamour.WithWordWrap(wrapWidth),
 	)
+}
+
+// updateConversationContent re-renders the conversation and updates the viewport and line tracking.
+func (m *Model) updateConversationContent() {
+	content, lines := m.renderConversation()
+	m.viewport.SetContent(content)
+	m.userMessageLines = lines
 }
 
 func (m Model) Init() tea.Cmd {
@@ -157,7 +166,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.viewport = viewport.New(m.conversationWidth(), m.contentHeight())
 		m.viewport.Style = lipgloss.NewStyle()
 		if len(m.messages) > 0 {
-			m.viewport.SetContent(m.renderConversation())
+			m.updateConversationContent()
 		}
 		return m, nil
 
@@ -183,11 +192,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.messages = msg.messages
 		m.loading = false
 		m.collapsed = make(map[string]bool)
-		m.viewport.SetContent(m.renderConversation())
+		m.updateConversationContent()
 		// Pending mark jump takes priority
-		if m.pendingMarkOffset != nil {
-			m.viewport.SetYOffset(*m.pendingMarkOffset)
-			m.pendingMarkOffset = nil
+		if m.pendingMarkOffset >= 0 {
+			m.viewport.SetYOffset(m.pendingMarkOffset)
+			m.pendingMarkOffset = -1
 		} else if m.sessionCursor < len(m.sessions) {
 			// Restore scroll position if we've been here before
 			if offset, ok := m.scrollPositions[m.sessions[m.sessionCursor].ID]; ok {
@@ -254,7 +263,7 @@ func (m Model) View() string {
 	}
 
 	var main string
-	if m.fullScreen || m.width < 60 {
+	if m.fullScreen || m.width < breakpointNarrow {
 		// Full-screen or very narrow: show whichever panel is focused
 		switch m.focus {
 		case panelProjects:
@@ -264,7 +273,7 @@ func (m Model) View() string {
 		default:
 			main = m.renderConversationPanel()
 		}
-	} else if m.width < 100 {
+	} else if m.width < breakpointMedium {
 		// Medium width: show 2 panels — the focused one and its neighbor
 		switch m.focus {
 		case panelProjects:
