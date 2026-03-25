@@ -119,6 +119,64 @@ var (
 			Bold(true)
 )
 
+// Tool call styles
+var (
+	toolHeaderStyle = lipgloss.NewStyle().
+			Foreground(colorWarm).
+			Bold(true)
+
+	toolBodyStyle = lipgloss.NewStyle().
+			Foreground(colorFgDim).
+			Padding(0, 2)
+
+	toolErrorStyle = lipgloss.NewStyle().
+			Foreground(colorRed)
+)
+
+// Diff styles
+var (
+	diffAddStyle = lipgloss.NewStyle().
+			Foreground(colorAccent)
+
+	diffRemoveStyle = lipgloss.NewStyle().
+			Foreground(colorRed)
+
+	diffHeaderStyle = lipgloss.NewStyle().
+			Foreground(colorFgDim).
+			Bold(true)
+)
+
+// Thinking block styles
+var (
+	thinkingHeaderStyle = lipgloss.NewStyle().
+				Foreground(colorFgDim).
+				Italic(true)
+
+	thinkingBodyStyle = lipgloss.NewStyle().
+				Foreground(colorFgDim).
+				Padding(0, 2)
+)
+
+// System message styles
+var (
+	systemMessageStyle = lipgloss.NewStyle().
+				Foreground(colorSubtle).
+				Italic(true).
+				Align(lipgloss.Center)
+)
+
+// Session stats
+var (
+	statsStyle = lipgloss.NewStyle().
+			Foreground(colorSubtle)
+
+	dateGroupStyle = lipgloss.NewStyle().
+			Foreground(colorWarm).
+			Bold(true).
+			Padding(0, 1).
+			MarginTop(1)
+)
+
 // Empty state
 var (
 	emptyStyle = lipgloss.NewStyle().
