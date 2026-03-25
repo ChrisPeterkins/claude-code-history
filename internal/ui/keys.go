@@ -377,26 +377,32 @@ func (m *Model) toggleCollapsibleAtCursor() {
 	}
 }
 
+// highlightTargetLine returns the absolute content line number that the
+// highlight cursor sits on. This must match applyLineHighlight's center calc.
+func (m *Model) highlightTargetLine() int {
+	visibleLines := m.viewport.Height
+	return m.viewport.YOffset + visibleLines/2
+}
+
 // nearestCollapsibleKey returns the key of the collapsible section closest to the
-// viewport center. Only considers sections currently visible in the viewport.
+// highlight cursor line. Only considers sections currently visible in the viewport.
 func (m *Model) nearestCollapsibleKey() string {
 	if len(m.collapsibleLines) == 0 {
 		return ""
 	}
 
+	target := m.highlightTargetLine()
 	viewTop := m.viewport.YOffset
 	viewBottom := viewTop + m.viewport.Height
-	viewCenter := viewTop + m.viewport.Height/2
 
 	bestKey := ""
 	bestDist := int(^uint(0) >> 1)
 
 	for key, line := range m.collapsibleLines {
-		// Only consider sections visible in the viewport
-		if line < viewTop-5 || line > viewBottom+5 {
+		if line < viewTop || line > viewBottom {
 			continue
 		}
-		dist := viewCenter - line
+		dist := target - line
 		if dist < 0 {
 			dist = -dist
 		}

@@ -342,9 +342,9 @@ func (m Model) renderHeader() string {
 	return logo + fill + breadcrumb
 }
 
-// applyLineHighlight adds a background highlight to the center line of the
-// viewport output. This runs on the already-rendered string so it costs
-// nothing — no re-rendering needed.
+// applyLineHighlight adds a background highlight to the cursor line of the
+// viewport output. Uses viewport.Height/2 as the cursor position, matching
+// the same calculation used by nearestCollapsibleKey for space-bar targeting.
 func (m Model) applyLineHighlight(viewOutput string, maxWidth int) string {
 	if m.focus != panelConversation || viewOutput == "" {
 		return viewOutput
@@ -355,8 +355,15 @@ func (m Model) applyLineHighlight(viewOutput string, maxWidth int) string {
 		return viewOutput
 	}
 
-	// Highlight the center line
-	center := len(lines) / 2
+	// Must match highlightTargetLine: viewport.Height/2
+	center := m.viewport.Height / 2
+	if center >= len(lines) {
+		center = len(lines) - 1
+	}
+	if center < 0 {
+		return viewOutput
+	}
+
 	lines[center] = selectedItemStyle.Width(maxWidth).Render(
 		strings.TrimRight(lines[center], " "),
 	)
