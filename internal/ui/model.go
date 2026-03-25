@@ -47,6 +47,10 @@ type Model struct {
 	highlightKey     string         // collapsible key currently targeted (for visual indicator)
 	collapsibleLines map[string]int // key → line number (populated during render)
 
+	// Render cache: avoids re-running glamour on every scroll
+	renderCache map[string]string // message UUID → rendered string (for non-collapsible content)
+	lastWidth   int               // invalidate cache when width changes
+
 	// Help overlay
 	showHelp bool
 
@@ -116,6 +120,7 @@ func NewModel() Model {
 		spinner:         s,
 		scrollPositions: make(map[string]int),
 		marks:             make(map[rune]markPosition),
+		renderCache:       make(map[string]string),
 		pendingMarkOffset: -1,
 	}
 }
@@ -209,6 +214,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.messages = msg.messages
 		m.loading = false
 		m.collapsed = make(map[string]bool)
+		m.renderCache = make(map[string]string)
 		m.updateConversationContent()
 		// Pending mark jump takes priority
 		if m.pendingMarkOffset >= 0 {

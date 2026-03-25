@@ -91,6 +91,12 @@ func (m Model) renderConversation() renderResult {
 }
 
 func (m Model) renderUserMessage(msg data.Message, w int) string {
+	// Check cache first
+	cacheKey := "user:" + msg.UUID
+	if cached, ok := m.renderCache[cacheKey]; ok && m.lastWidth == w {
+		return cached
+	}
+
 	ts := timestampStyle.Render(msg.Timestamp.Format("15:04:05"))
 	avatar := avatarUserStyle.Render("●")
 	label := " " + avatar + " " + userLabelStyle.Render("You") + " " + ts
@@ -107,7 +113,10 @@ func (m Model) renderUserMessage(msg data.Message, w int) string {
 	}
 
 	body := userBubbleStyle.Width(w).Render(mdRendered)
-	return label + "\n" + body
+	result := label + "\n" + body
+	m.renderCache[cacheKey] = result
+	m.lastWidth = w
+	return result
 }
 
 func (m Model) renderAssistantMessage(msg data.Message, w int) string {
@@ -119,17 +128,25 @@ func (m Model) renderAssistantMessage(msg data.Message, w int) string {
 	sections = append(sections, label)
 
 	// Render each content block in order
-	for _, block := range msg.ContentBlocks {
+	for i, block := range msg.ContentBlocks {
 		switch block.Type {
 		case "text":
 			if block.Text == "" {
 				continue
 			}
-			mdRendered, err := m.renderer.Render(block.Text)
-			if err != nil || strings.TrimSpace(mdRendered) == "" {
-				mdRendered = block.Text
+			// Cache glamour-rendered text blocks
+			cacheKey := fmt.Sprintf("ast:%s:%d", msg.UUID, i)
+			rendered, ok := m.renderCache[cacheKey]
+			if !ok || m.lastWidth != w {
+				mdRendered, err := m.renderer.Render(block.Text)
+				if err != nil || strings.TrimSpace(mdRendered) == "" {
+					mdRendered = block.Text
+				}
+				rendered = assistantBubbleStyle.Width(w).Render(mdRendered)
+				m.renderCache[cacheKey] = rendered
+				m.lastWidth = w
 			}
-			sections = append(sections, assistantBubbleStyle.Width(w).Render(mdRendered))
+			sections = append(sections, rendered)
 
 		case "thinking":
 			sections = append(sections, m.renderThinkingBlock(block, msg.UUID, w))

@@ -118,6 +118,7 @@ func (m Model) handleActionKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
 		if m.focus == panelConversation {
 			offset := m.viewport.YOffset
 			m.toggleCollapsibleAtCursor()
+			m.renderCache = make(map[string]string) // clear cache on toggle
 			m.updateConversationContent()
 			m.viewport.SetYOffset(offset)
 			return m, nil, true
@@ -133,6 +134,7 @@ func (m Model) handleActionKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
 		if m.focus == panelConversation {
 			offset := m.viewport.YOffset
 			m.expandAll()
+			m.renderCache = make(map[string]string)
 			m.updateConversationContent()
 			m.viewport.SetYOffset(offset)
 			return m, nil, true
@@ -142,6 +144,7 @@ func (m Model) handleActionKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
 		if m.focus == panelConversation {
 			offset := m.viewport.YOffset
 			m.collapseAll()
+			m.renderCache = make(map[string]string)
 			m.updateConversationContent()
 			m.viewport.SetYOffset(offset)
 			return m, nil, true
