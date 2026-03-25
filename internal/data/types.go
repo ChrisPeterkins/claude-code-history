@@ -4,10 +4,11 @@ import "time"
 
 // Project represents a Claude Code project directory.
 type Project struct {
-	Name     string // human-readable name (last path segment)
-	Path     string // original project path (e.g., /Users/.../MyProject)
-	DirName  string // encoded directory name in ~/.claude/projects/
-	Sessions []Session
+	Name        string // human-readable name (last path segment)
+	Path        string // original project path (e.g., /Users/.../MyProject)
+	DirName     string // encoded directory name in ~/.claude/projects/
+	Sessions    []Session
+	HistoryOnly bool // true if this project only has history.jsonl entries (no full sessions)
 }
 
 // Session represents a single conversation session.
@@ -23,6 +24,8 @@ type Session struct {
 	TotalTokensIn   int
 	TotalTokensOut  int
 	TotalDurationMs int
+	HistoryOnly     bool            // true if sourced from history.jsonl only
+	HistoryEntries  []HistoryEntry  // populated for history-only sessions
 }
 
 // Message represents a single entry in a conversation.

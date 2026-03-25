@@ -35,11 +35,16 @@ func (m Model) renderProjectsPanel() string {
 	visibleStart, visibleEnd := m.visibleRange(m.projectCursor, len(m.projects), h-2)
 	for i := visibleStart; i < visibleEnd; i++ {
 		p := m.projects[i]
-		name := truncateStr(p.Name, w-4)
+		name := truncateStr(p.Name, w-6)
+		// Dim indicator for history-only projects
+		suffix := ""
+		if p.HistoryOnly {
+			suffix = " ○"
+		}
 		if i == m.projectCursor {
-			items = append(items, selectedItemStyle.Width(w-4).Render("▸ "+name))
+			items = append(items, selectedItemStyle.Width(w-4).Render("▸ "+name+suffix))
 		} else {
-			items = append(items, itemStyle.Width(w-4).Render("  "+name))
+			items = append(items, itemStyle.Width(w-4).Render("  "+name+suffix))
 		}
 	}
 

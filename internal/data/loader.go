@@ -48,6 +48,10 @@ func LoadProjects() ([]Project, error) {
 		projects = append(projects, p)
 	}
 
+	// Merge in history-only projects (older conversations without session files)
+	historyProjects, _ := LoadHistory()
+	projects = append(projects, historyProjects...)
+
 	sort.Slice(projects, func(i, j int) bool {
 		return projects[i].Name < projects[j].Name
 	})
@@ -102,6 +106,11 @@ func projectNameFromPath(fullPath string) string {
 
 // LoadSessions loads session metadata for a project (without full messages).
 func LoadSessions(project *Project) ([]Session, error) {
+	// History-only projects already have sessions populated
+	if project.HistoryOnly {
+		return project.Sessions, nil
+	}
+
 	projectDir := filepath.Join(claudeDir, "projects", project.DirName)
 	entries, err := os.ReadDir(projectDir)
 	if err != nil {
@@ -244,6 +253,11 @@ func peekSession(path string) (preview string, startedAt time.Time, stats sessio
 
 // LoadMessages loads all messages from a session JSONL file.
 func LoadMessages(session *Session) ([]Message, error) {
+	// History-only sessions have no JSONL file — build from history entries
+	if session.HistoryOnly {
+		return LoadHistoryMessages(session)
+	}
+
 	f, err := os.Open(session.FilePath)
 	if err != nil {
 		return nil, err
