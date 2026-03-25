@@ -131,9 +131,15 @@ func (m Model) renderAssistantMessage(msg data.Message, w int) string {
 func (m Model) renderThinkingBlock(block data.ContentBlock, msgUUID string, w int) string {
 	key := "thinking:" + msgUUID
 	collapsed := m.isCollapsed(key)
+	highlighted := key == m.highlightKey
+
+	gutter := thinkingGutterStyle
+	if highlighted {
+		gutter = toolGutterExpandedStyle // brighter border when targeted
+	}
 
 	if collapsed {
-		return thinkingGutterStyle.Render(thinkingHeaderStyle.Render("▸ Thinking..."))
+		return gutter.Render(thinkingHeaderStyle.Render("▸ Thinking..."))
 	}
 
 	header := thinkingHeaderStyle.Render("▾ Thinking")
@@ -145,12 +151,13 @@ func (m Model) renderThinkingBlock(block data.ContentBlock, msgUUID string, w in
 		text = text[:maxThinkingLen] + "\n... (truncated)"
 	}
 	body := thinkingBodyStyle.Width(w - 6).Render(text)
-	return thinkingGutterStyle.Render(header + "\n" + body)
+	return gutter.Render(header + "\n" + body)
 }
 
 func (m Model) renderToolCall(block data.ContentBlock, msg data.Message, w int) string {
 	key := "tool:" + block.ToolID
 	collapsed := m.isCollapsed(key)
+	highlighted := key == m.highlightKey
 
 	// Build header with tool name and a brief summary
 	summary := toolCallSummary(block)
@@ -163,7 +170,11 @@ func (m Model) renderToolCall(block data.ContentBlock, msg data.Message, w int) 
 		" " + toolHeaderStyle.Render(summary)
 
 	if collapsed {
-		return toolGutterCollapsedStyle.Render(header)
+		gutter := toolGutterCollapsedStyle
+		if highlighted {
+			gutter = toolGutterExpandedStyle // brighter when targeted
+		}
+		return gutter.Render(header)
 	}
 
 	var bodyParts []string

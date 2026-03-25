@@ -43,7 +43,8 @@ type Model struct {
 	renderer *glamour.TermRenderer
 
 	// Collapsible sections: key -> collapsed (true = collapsed)
-	collapsed map[string]bool
+	collapsed    map[string]bool
+	highlightKey string // collapsible key currently targeted (for visual indicator)
 
 	// Help overlay
 	showHelp bool
@@ -246,6 +247,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if m.focus == panelConversation {
 		var cmd tea.Cmd
 		m.viewport, cmd = m.viewport.Update(msg)
+		// Update highlight indicator based on scroll position
+		newKey := m.nearestCollapsibleKey()
+		if newKey != m.highlightKey {
+			m.highlightKey = newKey
+			m.updateConversationContent()
+		}
 		return m, cmd
 	}
 

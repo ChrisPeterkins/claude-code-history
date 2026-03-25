@@ -412,6 +412,37 @@ func (m *Model) toggleCollapsibleAtCursor() {
 	}
 }
 
+// nearestCollapsibleKey returns the key of the collapsible section closest to the viewport center.
+func (m *Model) nearestCollapsibleKey() string {
+	currentLine := m.viewport.YOffset + m.viewport.Height/3
+
+	lineCount := 0
+	for _, msg := range m.messages {
+		if msg.Type != "assistant" {
+			lineCount += 3
+			continue
+		}
+		for _, block := range msg.ContentBlocks {
+			var key string
+			switch block.Type {
+			case "thinking":
+				key = "thinking:" + msg.UUID
+			case "tool_use":
+				key = "tool:" + block.ToolID
+			default:
+				lineCount += 2
+				continue
+			}
+			if key != "" && lineCount >= currentLine-5 && lineCount <= currentLine+5 {
+				return key
+			}
+			lineCount += 3
+		}
+		lineCount += 2
+	}
+	return ""
+}
+
 // expandAll expands all collapsible sections in the current conversation.
 func (m *Model) expandAll() {
 	for k := range m.collapsed {
