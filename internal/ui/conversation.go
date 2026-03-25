@@ -1,10 +1,17 @@
 package ui
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/alecthomas/chroma/v2"
+	"github.com/alecthomas/chroma/v2/formatters"
+	"github.com/alecthomas/chroma/v2/lexers"
+	"github.com/alecthomas/chroma/v2/styles"
 
 	"github.com/chrispeterkins/claude-history/internal/data"
 )
@@ -22,6 +29,13 @@ func (m Model) renderConversation() (string, []int) {
 	var parts []string
 	var userLines []int
 	lineCount := 0
+
+	// Compute and render stats header
+	statsHeader := m.renderConversationStats(w)
+	if statsHeader != "" {
+		parts = append(parts, statsHeader)
+		lineCount += strings.Count(statsHeader, "\n") + 2
+	}
 
 	hasRendered := false
 	for _, msg := range m.messages {
@@ -168,6 +182,7 @@ func (m Model) renderToolCall(block data.ContentBlock, msg data.Message, w int) 
 				if len(result) > maxToolResultLen {
 					result = result[:maxToolResultLen] + "\n... (truncated)"
 				}
+				result = hardWrap(result, w-8)
 				if pair.Result.IsError {
 					bodyParts = append(bodyParts, toolErrorStyle.Width(w-6).Render("Error: "+result))
 				} else {
@@ -196,6 +211,50 @@ func (m Model) renderSystemMessage(msg data.Message, w int) string {
 	}
 	line := fmt.Sprintf("── turn completed in %s ──", durStr)
 	return systemMessageStyle.Width(w).Render(line)
+}
+
+// renderConversationStats builds a stats summary line for the conversation header.
+func (m Model) renderConversationStats(w int) string {
+	if len(m.messages) == 0 {
+		return ""
+	}
+
+	var msgCount, toolCount, totalTokens, totalDurationMs int
+	for _, msg := range m.messages {
+		if msg.Type == "user" || msg.Type == "assistant" {
+			msgCount++
+		}
+		toolCount += len(msg.ToolPairs)
+		totalTokens += msg.Usage.OutputTokens
+		if msg.Type == "system" && msg.Subtype == "turn_duration" {
+			totalDurationMs += msg.DurationMs
+		}
+	}
+
+	var statParts []string
+	if msgCount > 0 {
+		statParts = append(statParts, fmt.Sprintf("%d messages", msgCount))
+	}
+	if toolCount > 0 {
+		statParts = append(statParts, fmt.Sprintf("%d tool calls", toolCount))
+	}
+	if totalTokens > 0 {
+		statParts = append(statParts, formatTokenCount(totalTokens)+" tokens")
+	}
+	if totalDurationMs > 0 {
+		dur := time.Duration(totalDurationMs) * time.Millisecond
+		if dur >= time.Minute {
+			statParts = append(statParts, fmt.Sprintf("%dm %ds", int(dur.Minutes()), int(dur.Seconds())%60))
+		} else {
+			statParts = append(statParts, fmt.Sprintf("%.0fs", dur.Seconds()))
+		}
+	}
+
+	if len(statParts) == 0 {
+		return ""
+	}
+
+	return tokenStyle.Render("  " + strings.Join(statParts, " · "))
 }
 
 func (m Model) renderTokenInfo(msg data.Message) string {
@@ -286,7 +345,19 @@ func formatToolInput(block data.ContentBlock) string {
 	switch block.ToolName {
 	case "Bash":
 		if cmd, ok := block.Input["command"].(string); ok {
-			return "$ " + cmd
+			lines := strings.Split(cmd, "\n")
+			if len(lines) == 1 {
+				return "$ " + cmd
+			}
+			var parts []string
+			for i, l := range lines {
+				if i == 0 {
+					parts = append(parts, "$ "+l)
+				} else {
+					parts = append(parts, "> "+l)
+				}
+			}
+			return strings.Join(parts, "\n")
 		}
 	case "Edit":
 		parts := []string{}
@@ -303,14 +374,18 @@ func formatToolInput(block data.ContentBlock) string {
 		if path, ok := block.Input["file_path"].(string); ok {
 			header := fmt.Sprintf("File: %s", shortPath(path))
 			if content, ok := block.Input["content"].(string); ok {
-				lines := strings.Count(content, "\n") + 1
-				header = fmt.Sprintf("File: %s (%d lines)", shortPath(path), lines)
-				// Show a preview of the content
+				lineCount := strings.Count(content, "\n") + 1
+				header = fmt.Sprintf("File: %s (%d lines)", shortPath(path), lineCount)
 				preview := content
 				if len(preview) > maxToolResultLen {
 					preview = preview[:maxToolResultLen] + "\n... (truncated)"
 				}
-				// Render as added lines
+				// Try syntax highlighting
+				highlighted := highlightCode(preview, path)
+				if highlighted != "" {
+					return header + "\n" + highlighted
+				}
+				// Fallback: render as added lines
 				var diffLines []string
 				for _, l := range strings.Split(preview, "\n") {
 					diffLines = append(diffLines, diffAddStyle.Render("+ "+l))
@@ -446,4 +521,53 @@ func clamp(val, lo, hi int) int {
 		return hi
 	}
 	return val
+}
+
+// highlightCode applies syntax highlighting to code based on filename extension.
+// Returns empty string if highlighting fails or isn't applicable.
+func highlightCode(code, filename string) string {
+	ext := filepath.Ext(filename)
+	if ext == "" {
+		return ""
+	}
+
+	lexer := lexers.Match(filename)
+	if lexer == nil {
+		return ""
+	}
+	lexer = chroma.Coalesce(lexer)
+
+	style := styles.Get("monokai")
+	formatter := formatters.Get("terminal256")
+	if formatter == nil {
+		return ""
+	}
+
+	iterator, err := lexer.Tokenise(nil, code)
+	if err != nil {
+		return ""
+	}
+
+	var buf bytes.Buffer
+	if err := formatter.Format(&buf, style, iterator); err != nil {
+		return ""
+	}
+
+	return buf.String()
+}
+
+// hardWrap wraps lines that exceed maxWidth by inserting line breaks.
+func hardWrap(s string, maxWidth int) string {
+	if maxWidth <= 0 {
+		return s
+	}
+	var result []string
+	for _, line := range strings.Split(s, "\n") {
+		for len(line) > maxWidth {
+			result = append(result, line[:maxWidth])
+			line = line[maxWidth:]
+		}
+		result = append(result, line)
+	}
+	return strings.Join(result, "\n")
 }

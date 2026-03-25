@@ -31,12 +31,14 @@ func (m Model) renderHelpOverlay() string {
 				{"Enter", "Drill into next panel"},
 				{"Esc", "Go back a panel"},
 				{"f", "Toggle full-screen"},
+				{"F", "Cycle session filter"},
 			},
 		},
 		{
 			title: "Conversation",
 			keys: []struct{ key, desc string }{
 				{"Space", "Expand/collapse tool calls"},
+				{"a / A", "Expand all / collapse all"},
 				{"m + a-z", "Set a bookmark"},
 				{"' + a-z", "Jump to bookmark"},
 			},

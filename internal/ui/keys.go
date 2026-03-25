@@ -119,6 +119,26 @@ func (m Model) handleActionKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
 			m.updateConversationContent()
 			return m, nil, true
 		}
+
+	case "F":
+		m.sessionFilter = (m.sessionFilter + 1) % len(sessionFilterTypes)
+		m.sessionCursor = 0
+		m.statusMessage = "Filter: " + sessionFilterTypes[m.sessionFilter].label
+		return m, clearStatusAfter(2 * time.Second), true
+
+	case "a":
+		if m.focus == panelConversation {
+			m.expandAll()
+			m.updateConversationContent()
+			return m, nil, true
+		}
+
+	case "A":
+		if m.focus == panelConversation {
+			m.collapseAll()
+			m.updateConversationContent()
+			return m, nil, true
+		}
 	}
 
 	return m, nil, false
@@ -377,7 +397,7 @@ func (m *Model) toggleCollapsibleAtCursor() {
 		lineCount += 2
 	}
 
-	// Fallback: toggle all sections
+	// Fallback: toggle all
 	allExpanded := true
 	for _, v := range m.collapsed {
 		if v {
@@ -385,21 +405,30 @@ func (m *Model) toggleCollapsibleAtCursor() {
 			break
 		}
 	}
-
 	if allExpanded || len(m.collapsed) == 0 {
-		for _, msg := range m.messages {
-			for _, block := range msg.ContentBlocks {
-				switch block.Type {
-				case "thinking":
-					m.collapsed["thinking:"+msg.UUID] = true
-				case "tool_use":
-					m.collapsed["tool:"+block.ToolID] = true
-				}
-			}
-		}
+		m.collapseAll()
 	} else {
-		for k := range m.collapsed {
-			m.collapsed[k] = false
+		m.expandAll()
+	}
+}
+
+// expandAll expands all collapsible sections in the current conversation.
+func (m *Model) expandAll() {
+	for k := range m.collapsed {
+		m.collapsed[k] = false
+	}
+}
+
+// collapseAll collapses all collapsible sections in the current conversation.
+func (m *Model) collapseAll() {
+	for _, msg := range m.messages {
+		for _, block := range msg.ContentBlocks {
+			switch block.Type {
+			case "thinking":
+				m.collapsed["thinking:"+msg.UUID] = true
+			case "tool_use":
+				m.collapsed["tool:"+block.ToolID] = true
+			}
 		}
 	}
 }

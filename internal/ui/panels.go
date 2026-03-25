@@ -69,9 +69,13 @@ func (m Model) renderSessionsPanel() string {
 	w := m.sessionsWidth()
 	h := m.contentHeight()
 
-	title := panelTitleStyle.Render("Sessions")
+	filterLabel := ""
+	if m.sessionFilter > 0 {
+		filterLabel = " (" + sessionFilterTypes[m.sessionFilter].label + ")"
+	}
+	title := panelTitleStyle.Render("Sessions" + filterLabel)
 	if m.focus == panelSessions {
-		title = panelTitleActiveStyle.Render(" Sessions ")
+		title = panelTitleActiveStyle.Render(" Sessions" + filterLabel + " ")
 	}
 
 	var items []string
@@ -80,7 +84,7 @@ func (m Model) renderSessionsPanel() string {
 	if len(m.sessions) == 0 {
 		items = append(items, "\n"+emptyLogoStyle.Width(w-4).Render("◈")+"\n"+emptyStyle.Width(w-4).Render("No sessions"))
 	} else {
-		groups := GroupSessionsByDate(m.sessions)
+		groups := GroupSessionsByDate(m.filterSessions(m.sessions))
 		// Flatten groups into displayable items with cursor tracking
 		var flatItems []sessionListItem
 		for _, g := range groups {
@@ -120,12 +124,13 @@ func (m Model) renderSessionsPanel() string {
 
 			focused := m.focus == panelSessions
 			if item.origIdx == m.sessionCursor {
-				s1, s2 := selectedItemStyle, selectedItemDescStyle
+				s1 := selectedItemStyle
 				if !focused {
-					s1, s2 = dimSelectedItemStyle, dimSelectedItemDescStyle
+					s1 = dimSelectedItemStyle
 				}
 				line1 := s1.Width(w - 4).Render(date + "  " + stats)
-				line2 := s2.Width(w - 4).Render(preview)
+				// Preview elevated to normal brightness as pseudo-title
+				line2 := s1.Width(w - 4).Render(preview)
 				items = append(items, line1, line2)
 			} else {
 				s1, s2 := itemStyle, itemDescStyle
@@ -335,4 +340,34 @@ func (m Model) renderHeader() string {
 	fill := headerLineStyle.Render(" " + strings.Repeat("─", fillLen) + " ")
 
 	return logo + fill + breadcrumb
+}
+
+// filterSessions applies the current session filter.
+func (m Model) filterSessions(sessions []data.Session) []data.Session {
+	if m.sessionFilter == 0 {
+		return sessions // "all" — no filtering
+	}
+
+	filterName := sessionFilterTypes[m.sessionFilter].name
+	now := time.Now()
+
+	var filtered []data.Session
+	for _, s := range sessions {
+		switch filterName {
+		case "code":
+			// Sessions with significant activity (proxy: >10 messages means tool use likely)
+			if s.MessageCount > 10 {
+				filtered = append(filtered, s)
+			}
+		case "long":
+			if s.MessageCount >= filterLongMinMessages {
+				filtered = append(filtered, s)
+			}
+		case "recent":
+			if now.Sub(s.StartedAt).Hours() < float64(filterRecentDays*24) {
+				filtered = append(filtered, s)
+			}
+		}
+	}
+	return filtered
 }

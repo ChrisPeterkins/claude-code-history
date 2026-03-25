@@ -69,6 +69,9 @@ type Model struct {
 	awaitingMark     markMode
 	pendingMarkOffset int // offset to restore after cross-session mark jump, -1 = none
 
+	// Session filter
+	sessionFilter int // index into sessionFilterTypes
+
 	// Status flash message
 	statusMessage string
 	statusExpiry  time.Time
