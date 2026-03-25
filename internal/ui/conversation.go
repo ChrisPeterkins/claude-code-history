@@ -250,7 +250,16 @@ func toolCallSummary(block data.ContentBlock) string {
 		}
 	case "Edit":
 		if path, ok := block.Input["file_path"].(string); ok {
-			return shortPath(path)
+			summary := shortPath(path)
+			// Count lines changed
+			if old, ok := block.Input["old_string"].(string); ok {
+				if new, ok := block.Input["new_string"].(string); ok {
+					oldN := strings.Count(old, "\n") + 1
+					newN := strings.Count(new, "\n") + 1
+					summary += fmt.Sprintf(" (-%d/+%d)", oldN, newN)
+				}
+			}
+			return summary
 		}
 	case "Glob":
 		if pattern, ok := block.Input["pattern"].(string); ok {
@@ -292,11 +301,23 @@ func formatToolInput(block data.ContentBlock) string {
 		return strings.Join(parts, "\n")
 	case "Write":
 		if path, ok := block.Input["file_path"].(string); ok {
+			header := fmt.Sprintf("File: %s", shortPath(path))
 			if content, ok := block.Input["content"].(string); ok {
 				lines := strings.Count(content, "\n") + 1
-				return fmt.Sprintf("File: %s (%d lines)", shortPath(path), lines)
+				header = fmt.Sprintf("File: %s (%d lines)", shortPath(path), lines)
+				// Show a preview of the content
+				preview := content
+				if len(preview) > maxToolResultLen {
+					preview = preview[:maxToolResultLen] + "\n... (truncated)"
+				}
+				// Render as added lines
+				var diffLines []string
+				for _, l := range strings.Split(preview, "\n") {
+					diffLines = append(diffLines, diffAddStyle.Render("+ "+l))
+				}
+				return header + "\n" + strings.Join(diffLines, "\n")
 			}
-			return "File: " + shortPath(path)
+			return header
 		}
 	case "Read":
 		if path, ok := block.Input["file_path"].(string); ok {
@@ -312,18 +333,65 @@ func formatToolInput(block data.ContentBlock) string {
 	return ""
 }
 
-// renderDiff renders old/new strings as a simple diff.
+// renderDiff renders old/new strings as a unified diff, showing only changed lines
+// with a few lines of context around each change.
 func renderDiff(old, new string) string {
 	oldLines := strings.Split(old, "\n")
 	newLines := strings.Split(new, "\n")
 
+	// Find common prefix and suffix to show only the changed region
+	prefixLen := 0
+	minLen := len(oldLines)
+	if len(newLines) < minLen {
+		minLen = len(newLines)
+	}
+	for prefixLen < minLen && oldLines[prefixLen] == newLines[prefixLen] {
+		prefixLen++
+	}
+
+	suffixLen := 0
+	for suffixLen < minLen-prefixLen &&
+		oldLines[len(oldLines)-1-suffixLen] == newLines[len(newLines)-1-suffixLen] {
+		suffixLen++
+	}
+
+	// If nothing changed (shouldn't happen but defensive)
+	if prefixLen+suffixLen >= len(oldLines) && prefixLen+suffixLen >= len(newLines) {
+		return diffHeaderStyle.Render("(no changes)")
+	}
+
 	var lines []string
-	for _, l := range oldLines {
-		lines = append(lines, diffRemoveStyle.Render("- "+l))
+
+	// Show up to 2 lines of context before the change
+	contextStart := prefixLen - 2
+	if contextStart < 0 {
+		contextStart = 0
 	}
-	for _, l := range newLines {
-		lines = append(lines, diffAddStyle.Render("+ "+l))
+	for i := contextStart; i < prefixLen; i++ {
+		lines = append(lines, timestampStyle.Render("  "+oldLines[i]))
 	}
+
+	// Show removed lines
+	removedEnd := len(oldLines) - suffixLen
+	for i := prefixLen; i < removedEnd; i++ {
+		lines = append(lines, diffRemoveStyle.Render("- "+oldLines[i]))
+	}
+
+	// Show added lines
+	addedEnd := len(newLines) - suffixLen
+	for i := prefixLen; i < addedEnd; i++ {
+		lines = append(lines, diffAddStyle.Render("+ "+newLines[i]))
+	}
+
+	// Show up to 2 lines of context after the change
+	contextEnd := len(oldLines) - suffixLen + 2
+	if contextEnd > len(oldLines) {
+		contextEnd = len(oldLines)
+	}
+	for i := len(oldLines) - suffixLen; i < contextEnd; i++ {
+		lines = append(lines, timestampStyle.Render("  "+oldLines[i]))
+	}
+
 	return strings.Join(lines, "\n")
 }
 
