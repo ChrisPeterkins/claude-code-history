@@ -350,22 +350,33 @@ func (m Model) renderScrollbar(height int) string {
 // renderHeader renders the top header bar with logo and breadcrumb.
 func (m Model) renderHeader() string {
 	logo := headerStyle.Render(" ◈ Claude History")
-	breadcrumb := m.renderBreadcrumb()
 
-	if breadcrumb != "" {
-		breadcrumb = headerBreadcrumbStyle.Render(breadcrumb) + " "
+	// Show update nudge if available
+	right := m.renderBreadcrumb()
+	if m.updateAvail != "" {
+		updateBadge := lipgloss.NewStyle().
+			Foreground(colorAccent).
+			Bold(true).
+			Render("Update " + m.updateAvail + " available")
+		if right != "" {
+			right = headerBreadcrumbStyle.Render(right) + "  " + updateBadge + " "
+		} else {
+			right = updateBadge + " "
+		}
+	} else if right != "" {
+		right = headerBreadcrumbStyle.Render(right) + " "
 	}
 
 	// Fill the middle with ─
 	logoLen := lipgloss.Width(logo)
-	bcLen := lipgloss.Width(breadcrumb)
-	fillLen := m.width - logoLen - bcLen - 2
+	rightLen := lipgloss.Width(right)
+	fillLen := m.width - logoLen - rightLen - 2
 	if fillLen < 3 {
 		fillLen = 3
 	}
 	fill := headerLineStyle.Render(" " + strings.Repeat("─", fillLen) + " ")
 
-	return logo + fill + breadcrumb
+	return logo + fill + right
 }
 
 // applyLineHighlight highlights the line of the nearest collapsible section

@@ -89,6 +89,10 @@ type Model struct {
 	// Transition effect
 	transitionUntil time.Time
 
+	// Version
+	version       string
+	updateAvail   string // non-empty if a newer version exists
+
 	// Theme
 	themeIndex int
 }
@@ -103,7 +107,7 @@ type SearchResult struct {
 }
 
 // NewModel creates and returns an initialized Model with default settings.
-func NewModel() Model {
+func NewModel(version string) Model {
 	r, _ := glamour.NewTermRenderer(
 		glamour.WithAutoStyle(),
 		glamour.WithWordWrap(80),
@@ -155,6 +159,7 @@ func NewModel() Model {
 		pendingMarkOffset: -1,
 		themeIndex:        themeIdx,
 		sessionFilter:     filterIdx,
+		version:           version,
 	}
 }
 
@@ -185,7 +190,7 @@ func (m *Model) updateConversationContent() {
 }
 
 func (m Model) Init() tea.Cmd {
-	return loadProjects
+	return tea.Batch(loadProjects, checkForUpdate(m.version))
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -259,6 +264,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.spinner, cmd = m.spinner.Update(msg)
 			return m, cmd
 		}
+		return m, nil
+
+	case updateAvailableMsg:
+		m.updateAvail = msg.version
 		return m, nil
 
 	case searchResultsMsg:
