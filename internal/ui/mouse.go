@@ -83,7 +83,21 @@ func (m Model) handleMouseClick(panel, x, y int) (tea.Model, tea.Cmd) {
 		}
 
 	case panelConversation:
-		// Clicks in conversation just focus the panel (scrolling handled by wheel)
+		// Check if the clicked line is a collapsible section header
+		// y offset: border(1) + header(1) = 2 lines before viewport content
+		clickedRelLine := y - 2
+		if clickedRelLine >= 0 {
+			clickedAbsLine := m.viewport.YOffset + clickedRelLine
+			for key, line := range m.collapsibleLines {
+				if line == clickedAbsLine {
+					m.collapsed[key] = !m.isCollapsed(key)
+					offset := m.viewport.YOffset
+					m.updateConversationContent()
+					m.viewport.SetYOffset(offset)
+					return m, nil
+				}
+			}
+		}
 	}
 
 	return m, nil
