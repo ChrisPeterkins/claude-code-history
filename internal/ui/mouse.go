@@ -53,15 +53,16 @@ func (m Model) panelAtX(x int) int {
 func (m Model) handleMouseClick(panel, x, y int) (tea.Model, tea.Cmd) {
 	m.focus = panel
 
+	// Y offset: header bar(1) + panel border(1) + panel title(1) = 3 lines before content
+	contentY := y - 3
+
 	switch panel {
 	case panelProjects:
-		// Map y to project index (border=1, title=1, then items)
-		itemY := y - 2
-		if itemY < 0 {
+		if contentY < 0 {
 			return m, nil
 		}
 		visibleStart, _ := m.visibleRange(m.projectCursor, len(m.projects), m.contentHeight()-2)
-		idx := visibleStart + itemY
+		idx := visibleStart + contentY
 		if idx >= 0 && idx < len(m.projects) && idx != m.projectCursor {
 			m.projectCursor = idx
 			m.sessionCursor = 0
@@ -69,14 +70,12 @@ func (m Model) handleMouseClick(panel, x, y int) (tea.Model, tea.Cmd) {
 		}
 
 	case panelSessions:
-		// Sessions have date headers (1 line) and items (2 lines each) — approximate
-		itemY := y - 2
-		if itemY < 0 {
+		if contentY < 0 {
 			return m, nil
 		}
-		// Simple approximation: each session takes ~2 lines
+		// Each session takes ~2 lines (date+stats, preview)
 		visibleStart, _ := m.visibleRange(m.sessionCursor, len(m.sessions), m.contentHeight()-2)
-		idx := visibleStart + itemY/2
+		idx := visibleStart + contentY/2
 		if idx >= 0 && idx < len(m.sessions) && idx != m.sessionCursor {
 			m.sessionCursor = idx
 			return m, m.loadMessagesWithSpinner()
@@ -84,8 +83,8 @@ func (m Model) handleMouseClick(panel, x, y int) (tea.Model, tea.Cmd) {
 
 	case panelConversation:
 		// Check if the clicked line is a collapsible section header
-		// y offset: border(1) + header(1) = 2 lines before viewport content
-		clickedRelLine := y - 2
+		// y offset: header bar(1) + border(1) + panel title(1) = 3 lines before viewport content
+		clickedRelLine := y - 3
 		if clickedRelLine >= 0 {
 			clickedAbsLine := m.viewport.YOffset + clickedRelLine
 			for key, line := range m.collapsibleLines {
