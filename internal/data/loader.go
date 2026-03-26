@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/chrispeterkins/claude-code-history/internal/config"
+	"github.com/chrispeterkins/claude-history/internal/config"
 )
 
 var claudeDir string

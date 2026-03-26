@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/chrispeterkins/claude-code-history/internal/data"
+	"github.com/chrispeterkins/claude-history/internal/data"
 )
 
 // DateGroup groups sessions under a label like "Today" or "This Week".

@@ -3,7 +3,7 @@ package ui
 import (
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/chrispeterkins/claude-code-history/internal/data"
+	"github.com/chrispeterkins/claude-history/internal/data"
 )
 
 // --- Message types ---

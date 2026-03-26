@@ -7,7 +7,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/chrispeterkins/claude-code-history/internal/data"
+	"github.com/chrispeterkins/claude-history/internal/data"
 )
 
 // sessionListItem represents either a date group header or a session entry.

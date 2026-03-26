@@ -20,14 +20,14 @@ A terminal UI for browsing your [Claude Code](https://claude.ai/claude-code) con
 ### From source (requires Go 1.21+)
 
 ```sh
-go install github.com/chrispeterkins/claude-code-history@latest
+go install github.com/chrispeterkins/claude-history@latest
 ```
 
 ### Build locally
 
 ```sh
-git clone https://github.com/ChrisPeterkins/claude-code-history.git
-cd claude-code-history
+git clone https://github.com/ChrisPeterkins/claude-history.git
+cd claude-history
 make install   # builds and copies to /usr/local/bin
 ```
 

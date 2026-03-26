@@ -8,7 +8,7 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/chrispeterkins/claude-code-history/internal/config"
+	"github.com/chrispeterkins/claude-history/internal/config"
 )
 
 // handleKey dispatches keyboard input to focused handlers.

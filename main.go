@@ -6,7 +6,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/chrispeterkins/claude-code-history/internal/ui"
+	"github.com/chrispeterkins/claude-history/internal/ui"
 )
 
 func main() {

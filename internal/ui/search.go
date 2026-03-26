@@ -6,7 +6,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/chrispeterkins/claude-code-history/internal/data"
+	"github.com/chrispeterkins/claude-history/internal/data"
 )
 
 type searchResultsMsg struct {
