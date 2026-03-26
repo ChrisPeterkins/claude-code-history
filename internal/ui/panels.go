@@ -393,16 +393,13 @@ func (m Model) applyLineHighlight(viewOutput string, maxWidth int) string {
 		return viewOutput
 	}
 
-	lines := strings.Split(viewOutput, "\n")
-
-	// Highlight search matches if in conv search mode
+	// Search mode: highlight matching lines
 	if m.convSearchMode && len(m.convSearchMatches) > 0 {
+		lines := strings.Split(viewOutput, "\n")
 		matchSet := make(map[int]bool)
 		for _, absLine := range m.convSearchMatches {
-			rel := absLine - m.viewport.YOffset
-			matchSet[rel] = true
+			matchSet[absLine-m.viewport.YOffset] = true
 		}
-		// Highlight current match differently
 		currentRel := -1
 		if m.convSearchIdx < len(m.convSearchMatches) {
 			currentRel = m.convSearchMatches[m.convSearchIdx] - m.viewport.YOffset
@@ -422,21 +419,23 @@ func (m Model) applyLineHighlight(viewOutput string, maxWidth int) string {
 	if key == "" {
 		return viewOutput
 	}
-
 	absLine, ok := m.collapsibleLines[key]
 	if !ok {
 		return viewOutput
 	}
 	relativeLine := absLine - m.viewport.YOffset
-
-	if relativeLine < 0 || relativeLine >= len(lines) {
+	if relativeLine < 0 {
 		return viewOutput
 	}
 
+	// Only split when we actually need to modify a line
+	lines := strings.Split(viewOutput, "\n")
+	if relativeLine >= len(lines) {
+		return viewOutput
+	}
 	lines[relativeLine] = selectedItemStyle.Width(maxWidth).Render(
 		strings.TrimRight(lines[relativeLine], " "),
 	)
-
 	return strings.Join(lines, "\n")
 }
 

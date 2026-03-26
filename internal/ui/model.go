@@ -70,7 +70,7 @@ type Model struct {
 	// Vim marks
 	marks            map[rune]markPosition
 	awaitingMark     markMode
-	pendingMarkOffset int // offset to restore after cross-session mark jump, -1 = none
+	pendingMarkOffset *int // offset to restore after cross-session mark jump
 
 	// In-conversation search
 	convSearchMode    bool
@@ -162,7 +162,6 @@ func NewModel(version string) Model {
 		scrollPositions:   make(map[string]int),
 		marks:             make(map[rune]markPosition),
 		convSearchInput:   csi,
-		pendingMarkOffset: -1,
 		themeIndex:        themeIdx,
 		sessionFilter:     filterIdx,
 		version:           version,
@@ -249,9 +248,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.collapsed = make(map[string]bool)
 		m.updateConversationContent()
 		// Pending mark jump takes priority
-		if m.pendingMarkOffset >= 0 {
-			m.viewport.SetYOffset(m.pendingMarkOffset)
-			m.pendingMarkOffset = -1
+		if m.pendingMarkOffset != nil {
+			m.viewport.SetYOffset(*m.pendingMarkOffset)
+			m.pendingMarkOffset = nil
 		} else if m.sessionCursor < len(m.sessions) {
 			// Restore scroll position if we've been here before
 			if offset, ok := m.scrollPositions[m.sessions[m.sessionCursor].ID]; ok {

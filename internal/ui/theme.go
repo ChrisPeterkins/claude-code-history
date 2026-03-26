@@ -198,75 +198,40 @@ func applyTheme(t Theme) {
 	rebuildStyles()
 }
 
+// panelBorderStyle creates a panel style with the given border type and color.
+func panelBorderStyle(border lipgloss.Border, color lipgloss.Color) lipgloss.Style {
+	return lipgloss.NewStyle().Border(border).BorderForeground(color).Padding(0, 1)
+}
+
+// leftBorderStyle creates a left-only border style.
+func leftBorderStyle(color lipgloss.Color) lipgloss.Style {
+	return lipgloss.NewStyle().
+		Border(lipgloss.NormalBorder(), false, false, false, true).
+		BorderForeground(color).
+		PaddingLeft(1)
+}
+
 // rebuildStyles reconstructs all lipgloss styles from the current color vars.
 func rebuildStyles() {
 	// --- Panels ---
-	panelStyle = lipgloss.NewStyle().
-		Border(lipgloss.NormalBorder()).
-		BorderForeground(colorSubtle).
-		Padding(0, 1)
+	panelStyle = panelBorderStyle(lipgloss.NormalBorder(), colorSubtle)
+	activePanelStyle = panelBorderStyle(lipgloss.RoundedBorder(), colorPrimary)
+	transitionPanelStyle = panelBorderStyle(lipgloss.RoundedBorder(), colorAccent)
 
-	activePanelStyle = lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(colorPrimary).
-		Padding(0, 1)
+	panelTitleStyle = lipgloss.NewStyle().Bold(true).Foreground(colorPrimary).Padding(0, 1)
+	panelTitleActiveStyle = lipgloss.NewStyle().Bold(true).Foreground(colorBg).Background(colorPrimary).Padding(0, 1)
 
-	transitionPanelStyle = lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(colorAccent).
-		Padding(0, 1)
+	// --- List items ---
+	itemStyle = lipgloss.NewStyle().Foreground(colorFg).PaddingLeft(2)
+	itemDescStyle = lipgloss.NewStyle().Foreground(colorFgDim).PaddingLeft(2)
+	selectedItemStyle = leftBorderStyle(colorSecondary).Foreground(colorFg).Background(colorBgSelected).Bold(true)
+	selectedItemDescStyle = lipgloss.NewStyle().Foreground(colorSecondary).Background(colorBgSelected).PaddingLeft(2)
 
-	panelTitleStyle = lipgloss.NewStyle().
-		Bold(true).
-		Foreground(colorPrimary).
-		Padding(0, 1)
-
-	panelTitleActiveStyle = lipgloss.NewStyle().
-		Bold(true).
-		Foreground(colorBg).
-		Background(colorPrimary).
-		Padding(0, 1)
-
-	// --- List items (focused panel) ---
-	itemStyle = lipgloss.NewStyle().
-		Foreground(colorFg).
-		PaddingLeft(2)
-
-	selectedItemStyle = lipgloss.NewStyle().
-		Foreground(colorFg).
-		Background(colorBgSelected).
-		Bold(true).
-		Border(lipgloss.NormalBorder(), false, false, false, true).
-		BorderForeground(colorSecondary).
-		PaddingLeft(1)
-
-	itemDescStyle = lipgloss.NewStyle().
-		Foreground(colorFgDim).
-		PaddingLeft(2)
-
-	selectedItemDescStyle = lipgloss.NewStyle().
-		Foreground(colorSecondary).
-		Background(colorBgSelected).
-		PaddingLeft(2)
-
-	// --- List items (dimmed for unfocused panels) ---
-	dimItemStyle = lipgloss.NewStyle().
-		Foreground(colorSubtle).
-		PaddingLeft(2)
-
-	dimSelectedItemStyle = lipgloss.NewStyle().
-		Foreground(colorFgDim).
-		Border(lipgloss.NormalBorder(), false, false, false, true).
-		BorderForeground(colorSubtle).
-		PaddingLeft(1)
-
-	dimItemDescStyle = lipgloss.NewStyle().
-		Foreground(colorSubtle).
-		PaddingLeft(2)
-
-	dimSelectedItemDescStyle = lipgloss.NewStyle().
-		Foreground(colorSubtle).
-		PaddingLeft(2)
+	// --- Dimmed list items (unfocused panels) ---
+	dimItemStyle = lipgloss.NewStyle().Foreground(colorSubtle).PaddingLeft(2)
+	dimItemDescStyle = lipgloss.NewStyle().Foreground(colorSubtle).PaddingLeft(2)
+	dimSelectedItemStyle = leftBorderStyle(colorSubtle).Foreground(colorFgDim)
+	dimSelectedItemDescStyle = lipgloss.NewStyle().Foreground(colorSubtle).PaddingLeft(2)
 
 	// --- Conversation ---
 	userBubbleStyle = lipgloss.NewStyle().
@@ -362,15 +327,8 @@ func rebuildStyles() {
 	toolErrorStyle = lipgloss.NewStyle().
 		Foreground(colorRed)
 
-	toolGutterCollapsedStyle = lipgloss.NewStyle().
-		Border(lipgloss.NormalBorder(), false, false, false, true).
-		BorderForeground(colorSubtle).
-		PaddingLeft(1)
-
-	toolGutterExpandedStyle = lipgloss.NewStyle().
-		Border(lipgloss.NormalBorder(), false, false, false, true).
-		BorderForeground(colorWarm).
-		PaddingLeft(1)
+	toolGutterCollapsedStyle = leftBorderStyle(colorSubtle)
+	toolGutterExpandedStyle = leftBorderStyle(colorWarm)
 
 	// --- Diffs ---
 	diffAddStyle = lipgloss.NewStyle().
@@ -392,10 +350,7 @@ func rebuildStyles() {
 		Foreground(colorFgDim).
 		Padding(0, 2)
 
-	thinkingGutterStyle = lipgloss.NewStyle().
-		Border(lipgloss.NormalBorder(), false, false, false, true).
-		BorderForeground(colorFgDim).
-		PaddingLeft(1)
+	thinkingGutterStyle = leftBorderStyle(colorFgDim)
 
 	// --- System ---
 	systemMessageStyle = lipgloss.NewStyle().
