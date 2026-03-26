@@ -8,6 +8,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/chrispeterkins/claude-history/internal/config"
 )
 
 var claudeDir string
@@ -125,20 +127,13 @@ func readProjectPath(projectDir string) string {
 }
 
 // projectNameFromPath extracts a friendly project name from a full path.
-// Looks for common parent directories (Projects, code, dev, src, repos, workspace)
-// and uses everything after them. Falls back to the last path segment.
+// Uses project root directories from config (or defaults) to find the
+// boundary between the parent dir and the project name.
 func projectNameFromPath(fullPath string) string {
 	parts := strings.Split(fullPath, "/")
-	// Common parent directory names that contain projects
-	parents := map[string]bool{
-		"Projects": true, "projects": true,
-		"code": true, "Code": true,
-		"dev": true, "Dev": true,
-		"src": true, "repos": true,
-		"workspace": true, "Workspace": true,
-	}
+	roots := config.ProjectRoots()
 	for i, p := range parts {
-		if parents[p] && i+1 < len(parts) {
+		if roots[p] && i+1 < len(parts) {
 			return strings.Join(parts[i+1:], " ")
 		}
 	}

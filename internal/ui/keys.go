@@ -7,6 +7,8 @@ import (
 
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/chrispeterkins/claude-history/internal/config"
 )
 
 // handleKey dispatches keyboard input to focused handlers.
@@ -99,6 +101,10 @@ func (m Model) handleActionKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
 		if len(m.messages) > 0 {
 			m.updateConversationContent()
 		}
+		// Persist theme choice
+		cfg := config.Get()
+		cfg.Theme = themes[m.themeIndex].Name
+		config.Save(cfg)
 		return m, clearStatusAfter(2 * time.Second), true
 
 	case "f":

@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"strings"
 	"time"
 
 	"github.com/charmbracelet/bubbles/spinner"
@@ -10,6 +11,7 @@ import (
 	"github.com/charmbracelet/glamour"
 	"github.com/charmbracelet/lipgloss"
 
+	"github.com/chrispeterkins/claude-history/internal/config"
 	"github.com/chrispeterkins/claude-history/internal/data"
 )
 
@@ -119,15 +121,29 @@ func NewModel() Model {
 	s.Spinner = spinner.Dot
 	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("#88C0D0"))
 
+	// Load saved theme preference
+	themeIdx := 0
+	cfg := config.Get()
+	if cfg.Theme != "" {
+		for i, t := range themes {
+			if strings.EqualFold(t.Name, cfg.Theme) {
+				themeIdx = i
+				applyTheme(themes[i])
+				break
+			}
+		}
+	}
+
 	return Model{
-		renderer:        r,
-		collapsed:       make(map[string]bool),
-		searchInput:     ti,
-		spinner:         s,
-		scrollPositions: make(map[string]int),
+		renderer:          r,
+		collapsed:         make(map[string]bool),
+		searchInput:       ti,
+		spinner:           s,
+		scrollPositions:   make(map[string]int),
 		marks:             make(map[rune]markPosition),
 		convSearchInput:   csi,
 		pendingMarkOffset: -1,
+		themeIndex:        themeIdx,
 	}
 }
 
