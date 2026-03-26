@@ -8,7 +8,7 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/chrispeterkins/claude-history/internal/config"
+	"github.com/chrispeterkins/claude-code-history/internal/config"
 )
 
 // handleKey dispatches keyboard input to focused handlers.
@@ -151,6 +151,10 @@ func (m Model) handleActionKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
 		m.sessionFilter = (m.sessionFilter + 1) % len(sessionFilterTypes)
 		m.sessionCursor = 0
 		m.statusMessage = "Filter: " + sessionFilterTypes[m.sessionFilter].label
+		// Persist filter choice
+		cfg := config.Get()
+		cfg.DefaultFilter = sessionFilterTypes[m.sessionFilter].name
+		config.Save(cfg)
 		return m, clearStatusAfter(2 * time.Second), true
 
 	case "a":

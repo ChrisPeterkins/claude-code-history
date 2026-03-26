@@ -1,4 +1,4 @@
-module github.com/chrispeterkins/claude-history
+module github.com/chrispeterkins/claude-code-history
 
 go 1.26.1
 

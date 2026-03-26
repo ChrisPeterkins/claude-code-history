@@ -11,8 +11,8 @@ import (
 	"github.com/charmbracelet/glamour"
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/chrispeterkins/claude-history/internal/config"
-	"github.com/chrispeterkins/claude-history/internal/data"
+	"github.com/chrispeterkins/claude-code-history/internal/config"
+	"github.com/chrispeterkins/claude-code-history/internal/data"
 )
 
 // Focus panels
@@ -134,6 +134,16 @@ func NewModel() Model {
 		}
 	}
 
+	// Load saved filter preference
+	filterIdx := 0
+	filterName := config.DefaultFilterName()
+	for i, ft := range sessionFilterTypes {
+		if strings.EqualFold(ft.name, filterName) {
+			filterIdx = i
+			break
+		}
+	}
+
 	return Model{
 		renderer:          r,
 		collapsed:         make(map[string]bool),
@@ -144,6 +154,7 @@ func NewModel() Model {
 		convSearchInput:   csi,
 		pendingMarkOffset: -1,
 		themeIndex:        themeIdx,
+		sessionFilter:     filterIdx,
 	}
 }
 

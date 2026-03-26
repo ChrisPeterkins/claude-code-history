@@ -14,7 +14,7 @@ import (
 	"github.com/alecthomas/chroma/v2/styles"
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/chrispeterkins/claude-history/internal/data"
+	"github.com/chrispeterkins/claude-code-history/internal/data"
 )
 
 type renderResult struct {

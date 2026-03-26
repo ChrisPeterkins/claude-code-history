@@ -16,7 +16,12 @@ type Config struct {
 	ProjectRoots []string `json:"projectRoots,omitempty"`
 
 	// Theme is the name of the color theme to use on startup.
+	// One of: nord, dracula, catppuccin, light
 	Theme string `json:"theme,omitempty"`
+
+	// DefaultFilter is the session filter applied on startup.
+	// One of: all, code, long, recent
+	DefaultFilter string `json:"defaultFilter,omitempty"`
 }
 
 // DefaultProjectRoots are used when no config file exists or projectRoots is empty.
@@ -71,6 +76,14 @@ func Save(c Config) error {
 		return err
 	}
 	return os.WriteFile(configPath, data, 0644)
+}
+
+// DefaultFilterName returns the configured default filter, or "all".
+func DefaultFilterName() string {
+	if current.DefaultFilter != "" {
+		return current.DefaultFilter
+	}
+	return "all"
 }
 
 func load() Config {
