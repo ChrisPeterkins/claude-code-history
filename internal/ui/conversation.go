@@ -357,9 +357,7 @@ func (m Model) collectChangedFiles() []string {
 				continue
 			}
 			if path, ok := pair.Use.Input["file_path"].(string); ok {
-				// Use just the filename
-				parts := strings.Split(path, "/")
-				name := parts[len(parts)-1]
+				name := filepath.Base(path)
 				if !seen[name] {
 					seen[name] = true
 					names = append(names, name)
@@ -445,6 +443,14 @@ func formatTimeGap(gap time.Duration, w int) string {
 	return systemMessageStyle.Width(w).Render("── " + label + " ──")
 }
 
+// inputStr extracts a string value from a tool input map.
+func inputStr(input map[string]interface{}, key string) string {
+	if v, ok := input[key].(string); ok {
+		return v
+	}
+	return ""
+}
+
 // toolCallSummary returns a brief description of what a tool call does.
 func toolCallSummary(block data.ContentBlock) string {
 	if block.Input == nil {
@@ -453,46 +459,36 @@ func toolCallSummary(block data.ContentBlock) string {
 
 	switch block.ToolName {
 	case "Bash":
-		if cmd, ok := block.Input["command"].(string); ok {
+		cmd := inputStr(block.Input, "command")
+		if cmd != "" {
 			cmd = strings.ReplaceAll(cmd, "\n", " ")
 			if len(cmd) > maxCommandSummaryLen {
 				cmd = cmd[:maxCommandSummaryLen-3] + "..."
 			}
 			return cmd
 		}
-	case "Read":
-		if path, ok := block.Input["file_path"].(string); ok {
-			return shortPath(path)
-		}
-	case "Write":
-		if path, ok := block.Input["file_path"].(string); ok {
+	case "Read", "Write":
+		if path := inputStr(block.Input, "file_path"); path != "" {
 			return shortPath(path)
 		}
 	case "Edit":
-		if path, ok := block.Input["file_path"].(string); ok {
+		if path := inputStr(block.Input, "file_path"); path != "" {
 			summary := shortPath(path)
-			// Count lines changed
-			if old, ok := block.Input["old_string"].(string); ok {
-				if new, ok := block.Input["new_string"].(string); ok {
-					oldN := strings.Count(old, "\n") + 1
-					newN := strings.Count(new, "\n") + 1
-					summary += fmt.Sprintf(" (-%d/+%d)", oldN, newN)
-				}
+			old := inputStr(block.Input, "old_string")
+			new := inputStr(block.Input, "new_string")
+			if old != "" && new != "" {
+				oldN := strings.Count(old, "\n") + 1
+				newN := strings.Count(new, "\n") + 1
+				summary += fmt.Sprintf(" (-%d/+%d)", oldN, newN)
 			}
 			return summary
 		}
 	case "Glob":
-		if pattern, ok := block.Input["pattern"].(string); ok {
-			return pattern
-		}
+		return inputStr(block.Input, "pattern")
 	case "Grep":
-		if pattern, ok := block.Input["pattern"].(string); ok {
-			return pattern
-		}
+		return inputStr(block.Input, "pattern")
 	case "Agent":
-		if desc, ok := block.Input["description"].(string); ok {
-			return desc
-		}
+		return inputStr(block.Input, "description")
 	}
 	return ""
 }
@@ -505,7 +501,8 @@ func formatToolInput(block data.ContentBlock) string {
 
 	switch block.ToolName {
 	case "Bash":
-		if cmd, ok := block.Input["command"].(string); ok {
+		cmd := inputStr(block.Input, "command")
+		if cmd != "" {
 			lines := strings.Split(cmd, "\n")
 			if len(lines) == 1 {
 				return "$ " + cmd
@@ -521,32 +518,30 @@ func formatToolInput(block data.ContentBlock) string {
 			return strings.Join(parts, "\n")
 		}
 	case "Edit":
-		parts := []string{}
-		if path, ok := block.Input["file_path"].(string); ok {
+		var parts []string
+		if path := inputStr(block.Input, "file_path"); path != "" {
 			parts = append(parts, "File: "+shortPath(path))
 		}
-		if old, ok := block.Input["old_string"].(string); ok {
-			if new, ok := block.Input["new_string"].(string); ok {
-				parts = append(parts, renderDiff(old, new))
-			}
+		old, new := inputStr(block.Input, "old_string"), inputStr(block.Input, "new_string")
+		if old != "" && new != "" {
+			parts = append(parts, renderDiff(old, new))
 		}
 		return strings.Join(parts, "\n")
 	case "Write":
-		if path, ok := block.Input["file_path"].(string); ok {
+		path := inputStr(block.Input, "file_path")
+		if path != "" {
 			header := fmt.Sprintf("File: %s", shortPath(path))
-			if content, ok := block.Input["content"].(string); ok {
+			content := inputStr(block.Input, "content")
+			if content != "" {
 				lineCount := strings.Count(content, "\n") + 1
 				header = fmt.Sprintf("File: %s (%d lines)", shortPath(path), lineCount)
 				preview := content
 				if len(preview) > maxToolResultLen {
 					preview = preview[:maxToolResultLen] + "\n... (truncated)"
 				}
-				// Try syntax highlighting
-				highlighted := highlightCode(preview, path)
-				if highlighted != "" {
+				if highlighted := highlightCode(preview, path); highlighted != "" {
 					return header + "\n" + highlighted
 				}
-				// Fallback: render as added lines
 				var diffLines []string
 				for _, l := range strings.Split(preview, "\n") {
 					diffLines = append(diffLines, diffAddStyle.Render("+ "+l))
@@ -556,7 +551,7 @@ func formatToolInput(block data.ContentBlock) string {
 			return header
 		}
 	case "Read":
-		if path, ok := block.Input["file_path"].(string); ok {
+		if path := inputStr(block.Input, "file_path"); path != "" {
 			return "File: " + shortPath(path)
 		}
 	default:
@@ -665,13 +660,6 @@ func formatTokenCount(n int) string {
 		return fmt.Sprintf("%.1fk", float64(n)/1000)
 	}
 	return fmt.Sprintf("%d", n)
-}
-
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
 }
 
 func clamp(val, lo, hi int) int {

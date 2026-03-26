@@ -73,7 +73,8 @@ type Model struct {
 	// In-conversation search
 	convSearchMode    bool
 	convSearchInput   textinput.Model
-	convSearchMatches []int // line numbers with matches
+	convSearchMatches []int    // line numbers with matches
+	convSearchContent []string // cached content lines (set on search entry)
 	convSearchIdx     int   // current match index
 
 	// Session filter

@@ -12,7 +12,7 @@ const (
 	maxCommandSummaryLen = 60
 	maxExportContentLen  = 1000
 
-	// Conversation rendering
+	// Conversation rendering (padding accounts for panel border + gutter + scroll indicator)
 	conversationPadding = 8
 
 	// Search

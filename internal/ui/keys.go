@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"math"
+	"strings"
 	"time"
 
 	"github.com/charmbracelet/bubbles/textinput"
@@ -76,6 +78,9 @@ func (m Model) handleActionKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
 			m.convSearchInput.Focus()
 			m.convSearchMatches = nil
 			m.convSearchIdx = 0
+			// Cache content lines once for fast searching
+			result := m.renderConversation()
+			m.convSearchContent = strings.Split(result.content, "\n")
 			return m, textinput.Blink, true
 		}
 
@@ -410,7 +415,7 @@ func (m *Model) nearestCollapsibleKey() string {
 	viewBottom := viewTop + m.viewport.Height
 
 	bestKey := ""
-	bestDist := int(^uint(0) >> 1)
+	bestDist := math.MaxInt
 
 	for key, line := range m.collapsibleLines {
 		if line < viewTop || line > viewBottom {

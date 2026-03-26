@@ -1,7 +1,6 @@
 package data
 
 import (
-	"bufio"
 	"os"
 	"path/filepath"
 	"strings"
@@ -45,8 +44,7 @@ func LoadSubagentMessages(agent *SubagentInfo) ([]Message, error) {
 	defer f.Close()
 
 	var messages []Message
-	scanner := bufio.NewScanner(f)
-	scanner.Buffer(make([]byte, 0, scannerMaxBuf), scannerLargeBuf)
+	scanner := newScanner(f, true)
 
 	for scanner.Scan() {
 		msg := parseMessage(scanner.Bytes())

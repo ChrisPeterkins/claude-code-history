@@ -20,6 +20,18 @@ func init() {
 	claudeDir = filepath.Join(home, ".claude")
 }
 
+// newScanner creates a buffered scanner for reading JSONL files.
+// Use large=true for session files that may have very long lines.
+func newScanner(f *os.File, large bool) *bufio.Scanner {
+	s := bufio.NewScanner(f)
+	if large {
+		s.Buffer(make([]byte, 0, scannerMaxBuf), scannerLargeBuf)
+	} else {
+		s.Buffer(make([]byte, 0, scannerInitBuf), scannerMaxBuf)
+	}
+	return s
+}
+
 // LoadProjects discovers all projects from ~/.claude/projects/.
 func LoadProjects() ([]Project, error) {
 	projectsDir := filepath.Join(claudeDir, "projects")
@@ -96,8 +108,7 @@ func readProjectPath(projectDir string) string {
 		if err != nil {
 			continue
 		}
-		scanner := bufio.NewScanner(f)
-		scanner.Buffer(make([]byte, 0, scannerInitBuf), scannerMaxBuf)
+		scanner := newScanner(f, false)
 		for scanner.Scan() {
 			var raw struct {
 				Type string `json:"type"`
@@ -185,15 +196,17 @@ type sessionStats struct {
 }
 
 // peekSession reads a session file to extract preview, timestamp, and stats.
-func peekSession(path string) (preview string, startedAt time.Time, stats sessionStats) {
+func peekSession(path string) (string, time.Time, sessionStats) {
+	var preview string
+	var startedAt time.Time
+	var stats sessionStats
 	f, err := os.Open(path)
 	if err != nil {
 		return "", time.Time{}, stats
 	}
 	defer f.Close()
 
-	scanner := bufio.NewScanner(f)
-	scanner.Buffer(make([]byte, 0, scannerMaxBuf), scannerLargeBuf)
+	scanner := newScanner(f, true)
 
 	foundPreview := false
 
@@ -271,7 +284,7 @@ func peekSession(path string) (preview string, startedAt time.Time, stats sessio
 			}
 		}
 	}
-	return
+	return preview, startedAt, stats
 }
 
 // LoadMessages loads all messages from a session JSONL file.
@@ -288,8 +301,7 @@ func LoadMessages(session *Session) ([]Message, error) {
 	defer f.Close()
 
 	var messages []Message
-	scanner := bufio.NewScanner(f)
-	scanner.Buffer(make([]byte, 0, scannerMaxBuf), scannerLargeBuf)
+	scanner := newScanner(f, true)
 
 	for scanner.Scan() {
 		msg := parseMessage(scanner.Bytes())
@@ -308,6 +320,10 @@ func LoadMessages(session *Session) ([]Message, error) {
 	return messages, nil
 }
 
+// parseMessage extracts a Message from a JSONL line. Returns nil for
+// unrecognized types. Individual field unmarshals intentionally ignore
+// errors — missing or malformed fields are left at zero values since
+// JSONL entries have inconsistent schemas across Claude Code versions.
 func parseMessage(line []byte) *Message {
 	var raw map[string]json.RawMessage
 	if err := json.Unmarshal(line, &raw); err != nil {
@@ -316,7 +332,7 @@ func parseMessage(line []byte) *Message {
 
 	var msgType string
 	if t, ok := raw["type"]; ok {
-		json.Unmarshal(t, &msgType)
+		json.Unmarshal(t, &msgType) //nolint: field-level errors are non-fatal
 	}
 
 	switch msgType {
@@ -530,19 +546,7 @@ func PairToolInteractions(messages []Message) {
 // --- Path helpers ---
 
 func decodeProjectName(dirName string) string {
-	fullPath := decodeDirToPath(dirName)
-	parts := strings.Split(fullPath, "/")
-	for i, p := range parts {
-		if p == "Projects" && i+1 < len(parts) {
-			return strings.Join(parts[i+1:], " ")
-		}
-	}
-	for i := len(parts) - 1; i >= 0; i-- {
-		if parts[i] != "" {
-			return parts[i]
-		}
-	}
-	return dirName
+	return projectNameFromPath(decodeDirToPath(dirName))
 }
 
 func decodeDirToPath(dirName string) string {

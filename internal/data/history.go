@@ -1,7 +1,6 @@
 package data
 
 import (
-	"bufio"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -45,8 +44,7 @@ func LoadHistory() ([]Project, error) {
 	// Parse history.jsonl and group by project
 	projectMap := make(map[string]*historyProject)
 
-	scanner := bufio.NewScanner(f)
-	scanner.Buffer(make([]byte, 0, scannerInitBuf), scannerMaxBuf)
+	scanner := newScanner(f, false)
 
 	for scanner.Scan() {
 		var entry HistoryEntry
